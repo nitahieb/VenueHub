@@ -19,13 +19,14 @@ import {
   Mail,
   AlertCircle
 } from 'lucide-react';
-import { getVenueById } from '../utils/venues';
+import { getVenueById, getVenueReviews } from '../utils/venues';
 import { getCurrentUser } from '../utils/auth';
 import { Venue } from '../types/venue';
 
 const VenueDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [venue, setVenue] = useState<Venue | null>(null);
+  const [venueReviews, setVenueReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -52,6 +53,10 @@ const VenueDetail: React.FC = () => {
         }
         
         setVenue(venueData);
+        
+        // Load venue reviews
+        const reviewsData = await getVenueReviews(id);
+        setVenueReviews(reviewsData);
       } catch (error) {
         console.error('Error loading venue:', error);
       } finally {
@@ -263,7 +268,7 @@ const VenueDetail: React.FC = () => {
                 
                 {/* Individual Reviews */}
                 <div className="space-y-4">
-                  {reviews.map((review) => (
+                  {venueReviews.map((review) => (
                     <div key={review.id} className="bg-white rounded-xl p-6 shadow-sm border">
                       <div className="flex items-start justify-between mb-3">
                         <div>
@@ -288,7 +293,7 @@ const VenueDetail: React.FC = () => {
                   ))}
                 </div>
                 
-                {reviews.length === 0 && (
+                {venueReviews.length === 0 && (
                 <>
                   <div className="flex items-center mb-4">
                     <div className="flex items-center mr-4">
