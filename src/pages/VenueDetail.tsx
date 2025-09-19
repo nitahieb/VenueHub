@@ -289,23 +289,25 @@ const VenueDetail: React.FC = () => {
                 </div>
                 
                 {reviews.length === 0 && (
-                <div className="flex items-center mb-4">
-                  <div className="flex items-center mr-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-5 w-5 ${
-                          i < Math.floor(venue.rating) ? 'text-amber-400 fill-current' : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
+                <>
+                  <div className="flex items-center mb-4">
+                    <div className="flex items-center mr-4">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-5 w-5 ${
+                            i < Math.floor(venue.rating) ? 'text-amber-400 fill-current' : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-lg font-semibold text-gray-900">{venue.rating} out of 5</span>
+                    <span className="text-gray-500 ml-2">({venue.reviews} reviews)</span>
                   </div>
-                  <span className="text-lg font-semibold text-gray-900">{venue.rating} out of 5</span>
-                  <span className="text-gray-500 ml-2">({venue.reviews} reviews)</span>
-                </div>
-                <p className="text-gray-600">
-                  No reviews yet. Be the first to review this venue!
-                </p>
+                  <p className="text-gray-600">
+                    No reviews yet. Be the first to review this venue!
+                  </p>
+                </>
                 )}
               </div>
             </div>
