@@ -25,35 +25,44 @@ const ChatBot: React.FC = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const generateBotResponse = (userMessage: string): ChatMessage => {
+  const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
     const message = userMessage.toLowerCase();
     let response = '';
     let recommendations = [];
-    const venues = getAllVenues();
+    
+    try {
+      let venues = [];
 
-    // Simple keyword matching for demo purposes
-    if (message.includes('wedding') || message.includes('bride') || message.includes('reception')) {
-      response = "Perfect! I found some beautiful wedding venues for you. Here are my top recommendations based on your needs:";
-      recommendations = venues.filter(v => v.category === 'wedding' || v.featured);
-    } else if (message.includes('corporate') || message.includes('business') || message.includes('conference') || message.includes('meeting')) {
-      response = "Great choice! Here are some excellent corporate venues that would be perfect for your business event:";
-      recommendations = venues.filter(v => v.category === 'corporate' || v.category === 'conference');
-    } else if (message.includes('outdoor') || message.includes('garden') || message.includes('outside')) {
-      response = "Wonderful! I have some amazing outdoor venues that would create a memorable atmosphere:";
-      recommendations = venues.filter(v => v.category === 'outdoor');
-    } else if (message.includes('party') || message.includes('birthday') || message.includes('celebration')) {
-      response = "Sounds fun! Here are some fantastic party venues that will make your celebration unforgettable:";
-      recommendations = venues.filter(v => v.category === 'party' || v.category === 'modern');
-    } else if (message.includes('budget') || message.includes('cheap') || message.includes('affordable')) {
-      response = "I understand budget is important. Here are some great value venues that offer excellent quality at reasonable prices:";
-      recommendations = venues.filter(v => v.price.hourly < 500).sort((a, b) => a.price.hourly - b.price.hourly);
-    } else if (message.includes('large') || message.includes('big') || message.match(/\d{3,}/)) {
-      const capacity = message.match(/\d+/)?.[0];
-      response = `I found venues that can accommodate ${capacity || 'large'} guests. Here are some spacious options:`;
-      recommendations = venues.filter(v => v.capacity.standing >= 200);
-    } else {
-      response = "Based on your requirements, here are some highly-rated venues I'd recommend. Each offers unique features that might be perfect for your event:";
-      recommendations = venues.filter(v => v.featured || v.rating >= 4.5).slice(0, 3);
+      // Simple keyword matching for demo purposes
+      if (message.includes('wedding') || message.includes('bride') || message.includes('reception')) {
+        response = "Perfect! I found some beautiful wedding venues for you. Here are my top recommendations based on your needs:";
+        venues = await searchVenues({ category: 'wedding' });
+      } else if (message.includes('corporate') || message.includes('business') || message.includes('conference') || message.includes('meeting')) {
+        response = "Great choice! Here are some excellent corporate venues that would be perfect for your business event:";
+        venues = await searchVenues({ category: 'corporate' });
+      } else if (message.includes('outdoor') || message.includes('garden') || message.includes('outside')) {
+        response = "Wonderful! I have some amazing outdoor venues that would create a memorable atmosphere:";
+        venues = await searchVenues({ category: 'outdoor' });
+      } else if (message.includes('party') || message.includes('birthday') || message.includes('celebration')) {
+        response = "Sounds fun! Here are some fantastic party venues that will make your celebration unforgettable:";
+        venues = await searchVenues({ category: 'party' });
+      } else if (message.includes('budget') || message.includes('cheap') || message.includes('affordable')) {
+        response = "I understand budget is important. Here are some great value venues that offer excellent quality at reasonable prices:";
+        venues = await searchVenues({ maxPrice: 500 });
+      } else if (message.includes('large') || message.includes('big') || message.match(/\d{3,}/)) {
+        const capacity = message.match(/\d+/)?.[0];
+        response = `I found venues that can accommodate ${capacity || 'large'} guests. Here are some spacious options:`;
+        venues = await searchVenues({ minCapacity: parseInt(capacity || '200') });
+      } else {
+        response = "Based on your requirements, here are some highly-rated venues I'd recommend. Each offers unique features that might be perfect for your event:";
+        venues = await searchVenues({});
+      }
+
+      recommendations = venues.slice(0, 3);
+    } catch (error) {
+      console.error('Error searching venues:', error);
+      response = "I'm sorry, I'm having trouble accessing venue data right now. Please try again in a moment.";
+      recommendations = [];
     }
 
     return {
@@ -81,9 +90,10 @@ const ChatBot: React.FC = () => {
 
     // Simulate AI thinking delay
     setTimeout(() => {
-      const botResponse = generateBotResponse(inputMessage);
-      setMessages(prev => [...prev, botResponse]);
-      setIsTyping(false);
+      generateBotResponse(inputMessage).then(botResponse => {
+        setMessages(prev => [...prev, botResponse]);
+        setIsTyping(false);
+      });
     }, 1500);
   };
 

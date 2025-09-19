@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { VenueCategory } from '../types/venue';
 import ImageUpload from '../components/ImageUpload';
-import { saveVenue, autoApproveVenue } from '../utils/venueStorage';
+import { createVenue } from '../utils/venues';
+import { getCurrentUser } from '../utils/auth';
 
 const ListVenue: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -35,6 +36,7 @@ const ListVenue: React.FC = () => {
   const [newAmenity, setNewAmenity] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const categories: { value: VenueCategory; label: string }[] = [
     { value: 'wedding', label: 'Wedding Venue' },
@@ -106,42 +108,40 @@ const ListVenue: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
 
     try {
-      // Save venue to local storage
-      const savedVenue = saveVenue({
+      // Check if user is logged in
+      const user = await getCurrentUser();
+      if (!user) {
+        setError('You must be logged in to list a venue. Please sign up or sign in first.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Create venue in database
+      await createVenue({
         name: formData.name,
         description: formData.description,
-        location: {
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zipCode: formData.zipCode
-        },
-        capacity: {
-          seated: parseInt(formData.seatedCapacity),
-          standing: parseInt(formData.standingCapacity)
-        },
-        price: {
-          hourly: parseInt(formData.hourlyPrice),
-          daily: parseInt(formData.dailyPrice)
-        },
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        seatedCapacity: parseInt(formData.seatedCapacity),
+        standingCapacity: parseInt(formData.standingCapacity),
+        hourlyPrice: parseInt(formData.hourlyPrice) * 100, // Convert to cents
+        dailyPrice: parseInt(formData.dailyPrice) * 100, // Convert to cents
         amenities: formData.amenities,
         images: formData.images,
         category: formData.category as VenueCategory,
-        availability: true,
-        submitterEmail: formData.submitterEmail
       });
-
-      // Auto-approve for demo purposes
-      autoApproveVenue(savedVenue.id);
 
       setIsSubmitting(false);
       setSubmitSuccess(true);
     } catch (error) {
       console.error('Error saving venue:', error);
+      setError(error instanceof Error ? error.message : 'Failed to submit venue. Please try again.');
       setIsSubmitting(false);
-      // Handle error state here
     }
   };
 
@@ -162,6 +162,12 @@ const ListVenue: React.FC = () => {
               className="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors duration-200"
             >
               Return to Home
+            </Link>
+            <Link
+              to="/my-venues"
+              className="block w-full bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors duration-200"
+            >
+              View My Venues
             </Link>
             <button
               onClick={() => {
@@ -528,6 +534,16 @@ const ListVenue: React.FC = () => {
               maxImages={10}
             />
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-4 rounded-lg">
+                <AlertCircle className="h-5 w-5" />
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
 
           {/* Terms and Submit */}
           <div className="bg-white rounded-xl shadow-lg p-8">

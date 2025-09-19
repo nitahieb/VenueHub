@@ -3,68 +3,53 @@ import { Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Eye, 
-  Edit, 
   Trash2, 
   Clock, 
   CheckCircle, 
   XCircle,
   Plus
 } from 'lucide-react';
-import { getUserVenues, deleteUserVenue, UserVenue } from '../utils/venueStorage';
+import { getUserVenues, deleteVenue } from '../utils/venues';
+import { Venue } from '../types/venue';
 
 const UserVenues: React.FC = () => {
-  const [userVenues, setUserVenues] = useState<UserVenue[]>([]);
+  const [userVenues, setUserVenues] = useState<Venue[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadUserVenues();
-    
-    // Listen for venue status updates
-    const handleVenueUpdate = () => {
-      loadUserVenues();
-    };
-
-    window.addEventListener('venueStatusUpdated', handleVenueUpdate);
-    return () => window.removeEventListener('venueStatusUpdated', handleVenueUpdate);
   }, []);
 
-  const loadUserVenues = () => {
-    setUserVenues(getUserVenues());
+  const loadUserVenues = async () => {
+    try {
+      const venues = await getUserVenues();
+      setUserVenues(venues);
+    } catch (error) {
+      console.error('Error loading user venues:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteVenue = (id: string) => {
+  const handleDeleteVenue = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this venue? This action cannot be undone.')) {
-      deleteUserVenue(id);
-      loadUserVenues();
+      try {
+        await deleteVenue(id);
+        await loadUserVenues();
+      } catch (error) {
+        console.error('Error deleting venue:', error);
+        alert('Failed to delete venue. Please try again.');
+      }
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="h-3 w-3 mr-1" />
-            Pending Review
-          </span>
-        );
-      case 'approved':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Approved
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <XCircle className="h-3 w-3 mr-1" />
-            Rejected
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
+  // For now, all venues are approved since they're in the database
+  const getStatusBadge = () => (
+    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+      <CheckCircle className="h-3 w-3 mr-1" />
+      Live
+    </span>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -102,7 +87,22 @@ const UserVenues: React.FC = () => {
         </div>
 
         {/* Venues List */}
-        {userVenues.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
+                <div className="md:flex">
+                  <div className="md:w-48 h-48 md:h-auto bg-gray-200"></div>
+                  <div className="flex-1 p-6 space-y-3">
+                    <div className="bg-gray-200 h-6 rounded w-3/4"></div>
+                    <div className="bg-gray-200 h-4 rounded w-1/2"></div>
+                    <div className="bg-gray-200 h-4 rounded w-full"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : userVenues.length === 0 ? (
           <div className="text-center py-12">
             <div className="max-w-md mx-auto">
               <div className="text-gray-400 mb-4">
@@ -160,7 +160,7 @@ const UserVenues: React.FC = () => {
                         </p>
                       </div>
                       <div className="ml-4">
-                        {getStatusBadge(venue.status)}
+                        {getStatusBadge()}
                       </div>
                     </div>
 
@@ -169,22 +169,17 @@ const UserVenues: React.FC = () => {
                         <span>Up to {venue.capacity.standing} guests</span>
                         <span>${venue.price.hourly}/hour</span>
                       </div>
-                      <span>
-                        Submitted {venue.submittedAt.toLocaleDateString()}
-                      </span>
                     </div>
 
                     {/* Actions */}
                     <div className="flex space-x-3">
-                      {venue.status === 'approved' && (
-                        <Link
-                          to={`/venue/${venue.id}`}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1"
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span>View Live</span>
-                        </Link>
-                      )}
+                      <Link
+                        to={`/venue/${venue.id}`}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span>View Live</span>
+                      </Link>
                       <button
                         onClick={() => handleDeleteVenue(venue.id)}
                         className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1"
@@ -193,22 +188,6 @@ const UserVenues: React.FC = () => {
                         <span>Delete</span>
                       </button>
                     </div>
-
-                    {/* Status Messages */}
-                    {venue.status === 'pending' && (
-                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm text-yellow-800">
-                          Your venue is being reviewed by our team. This usually takes 24-48 hours.
-                        </p>
-                      </div>
-                    )}
-                    {venue.status === 'rejected' && (
-                      <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-sm text-red-800">
-                          Your venue submission was rejected. Please contact support for more information.
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

@@ -1,11 +1,29 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Users, Star, MessageSquare, Sparkles } from 'lucide-react';
-import { getAllVenues } from '../data/venues';
+import { getFeaturedVenues } from '../utils/venues';
 import VenueCard from '../components/VenueCard';
+import { useState, useEffect } from 'react';
+import { Venue } from '../types/venue';
 
 const Home: React.FC = () => {
-  const featuredVenues = getAllVenues().filter(venue => venue.featured).slice(0, 3);
+  const [featuredVenues, setFeaturedVenues] = useState<Venue[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFeaturedVenues = async () => {
+      try {
+        const venues = await getFeaturedVenues();
+        setFeaturedVenues(venues.slice(0, 3));
+      } catch (error) {
+        console.error('Error loading featured venues:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedVenues();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -99,11 +117,26 @@ const Home: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredVenues.map((venue) => (
-              <VenueCard key={venue.id} venue={venue} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white rounded-xl shadow-md h-96 animate-pulse">
+                  <div className="bg-gray-200 h-48 rounded-t-xl"></div>
+                  <div className="p-6 space-y-3">
+                    <div className="bg-gray-200 h-4 rounded w-3/4"></div>
+                    <div className="bg-gray-200 h-3 rounded w-1/2"></div>
+                    <div className="bg-gray-200 h-3 rounded w-full"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredVenues.map((venue) => (
+                <VenueCard key={venue.id} venue={venue} />
+              ))}
+            </div>
+          )}
           
           <div className="text-center mt-12">
             <Link

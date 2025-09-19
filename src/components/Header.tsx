@@ -1,9 +1,37 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MapPin, MessageSquare, Search } from 'lucide-react';
+import { MapPin, MessageSquare, Search, User, LogOut } from 'lucide-react';
+import { getCurrentUser, signOut } from '../utils/auth';
+import type { AuthUser } from '../utils/auth';
 
 const Header: React.FC = () => {
   const location = useLocation();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.error('Error loading user:', error);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setUser(null);
+      setShowUserMenu(false);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -50,18 +78,55 @@ const Header: React.FC = () => {
             <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors duration-200 md:hidden">
               <Search className="h-5 w-5" />
             </button>
-            <Link
-              to="/my-venues"
-              className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors duration-200 hidden md:block"
-            >
-              My Venues
-            </Link>
-            <Link
-              to="/list-venue"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
-            >
-              List Your Venue
-            </Link>
+            
+            {user ? (
+              <>
+                <Link
+                  to="/my-venues"
+                  className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors duration-200 hidden md:block"
+                >
+                  My Venues
+                </Link>
+                <Link
+                  to="/list-venue"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+                >
+                  List Your Venue
+                </Link>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors duration-200"
+                  >
+                    <User className="h-4 w-4" />
+                    <span className="hidden md:block">{user.profile?.full_name || user.email}</span>
+                  </button>
+                  
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
+                      <div className="py-1">
+                        <button
+                          onClick={handleSignOut}
+                          className="flex items-center space-x-2 w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <button className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors duration-200">
+                  Sign In
+                </button>
+                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
+                  Sign Up
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

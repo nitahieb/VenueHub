@@ -1,41 +1,41 @@
 import React, { useState, useMemo } from 'react';
-import { getAllVenues } from '../data/venues';
+import { searchVenues } from '../utils/venues';
 import { VenueCategory } from '../types/venue';
+import { Venue } from '../types/venue';
 import VenueCard from '../components/VenueCard';
 import SearchFilters from '../components/SearchFilters';
 
 const Venues: React.FC = () => {
-  const [venues, setVenues] = useState(getAllVenues());
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState<VenueCategory | ''>('');
   const [maxPrice, setMaxPrice] = useState(0);
   const [minCapacity, setMinCapacity] = useState(0);
 
-  // Listen for venue status updates
   React.useEffect(() => {
-    const handleVenueUpdate = () => {
-      setVenues(getAllVenues());
+    const loadVenues = async () => {
+      try {
+        const venueData = await searchVenues({
+          searchTerm: searchTerm || undefined,
+          location: location || undefined,
+          category: category || undefined,
+          maxPrice: maxPrice || undefined,
+          minCapacity: minCapacity || undefined,
+        });
+        setVenues(venueData);
+      } catch (error) {
+        console.error('Error loading venues:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    window.addEventListener('venueStatusUpdated', handleVenueUpdate);
-    return () => window.removeEventListener('venueStatusUpdated', handleVenueUpdate);
-  }, []);
+    loadVenues();
+  }, [searchTerm, location, category, maxPrice, minCapacity]);
 
-  const filteredVenues = useMemo(() => {
-    return venues.filter((venue) => {
-      const matchesSearch = venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           venue.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesLocation = !location || 
-                             venue.location.city.toLowerCase().includes(location.toLowerCase()) ||
-                             venue.location.state.toLowerCase().includes(location.toLowerCase());
-      const matchesCategory = !category || venue.category === category;
-      const matchesPrice = !maxPrice || venue.price.hourly <= maxPrice;
-      const matchesCapacity = !minCapacity || venue.capacity.standing >= minCapacity;
-      
-      return matchesSearch && matchesLocation && matchesCategory && matchesPrice && matchesCapacity;
-    });
-  }, [venues, searchTerm, location, category, maxPrice, minCapacity]);
+  const filteredVenues = venues;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -64,11 +64,24 @@ const Venues: React.FC = () => {
 
         <div className="flex justify-between items-center mb-6">
           <p className="text-gray-600">
-            {filteredVenues.length} venue{filteredVenues.length !== 1 ? 's' : ''} found
+            {loading ? 'Loading...' : `${filteredVenues.length} venue${filteredVenues.length !== 1 ? 's' : ''} found`}
           </p>
         </div>
 
-        {filteredVenues.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-md h-96 animate-pulse">
+                <div className="bg-gray-200 h-48 rounded-t-xl"></div>
+                <div className="p-6 space-y-3">
+                  <div className="bg-gray-200 h-4 rounded w-3/4"></div>
+                  <div className="bg-gray-200 h-3 rounded w-1/2"></div>
+                  <div className="bg-gray-200 h-3 rounded w-full"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredVenues.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredVenues.map((venue) => (
               <VenueCard key={venue.id} venue={venue} />

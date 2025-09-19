@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   MapPin, 
@@ -17,11 +18,58 @@ import {
   Phone,
   Mail
 } from 'lucide-react';
-import { getAllVenues } from '../data/venues';
+import { getVenueById } from '../utils/venues';
+import { Venue } from '../types/venue';
 
 const VenueDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const venue = getAllVenues().find(v => v.id === id);
+  const [venue, setVenue] = useState<Venue | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadVenue = async () => {
+      if (!id) return;
+      
+      try {
+        const venueData = await getVenueById(id);
+        setVenue(venueData);
+      } catch (error) {
+        console.error('Error loading venue:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadVenue();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <Link
+              to="/venues"
+              className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to venues
+            </Link>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="animate-pulse">
+            <div className="bg-gray-200 h-96 rounded-xl mb-8"></div>
+            <div className="space-y-4">
+              <div className="bg-gray-200 h-8 rounded w-1/2"></div>
+              <div className="bg-gray-200 h-4 rounded w-3/4"></div>
+              <div className="bg-gray-200 h-4 rounded w-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!venue) {
     return (
