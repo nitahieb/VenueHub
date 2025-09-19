@@ -239,7 +239,56 @@ const VenueDetail: React.FC = () => {
             {/* Reviews Section */}
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews</h2>
-              <div className="bg-white rounded-xl p-6 shadow-sm border">
+              <div className="space-y-6">
+                {/* Overall Rating */}
+                <div className="bg-white rounded-xl p-6 shadow-sm border">
+                  <div className="flex items-center mb-4">
+                    <div className="flex items-center mr-4">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-5 w-5 ${
+                            i < Math.floor(venue.rating) ? 'text-amber-400 fill-current' : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-lg font-semibold text-gray-900">{venue.rating} out of 5</span>
+                    <span className="text-gray-500 ml-2">({venue.reviews} reviews)</span>
+                  </div>
+                  <p className="text-gray-600">
+                    Based on {venue.reviews} verified reviews from past events.
+                  </p>
+                </div>
+                
+                {/* Individual Reviews */}
+                <div className="space-y-4">
+                  {reviews.map((review) => (
+                    <div key={review.id} className="bg-white rounded-xl p-6 shadow-sm border">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{review.user_name}</h4>
+                          <div className="flex items-center mt-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < review.rating ? 'text-amber-400 fill-current' : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-gray-700">{review.comment}</p>
+                    </div>
+                  ))}
+                </div>
+                
+                {reviews.length === 0 && (
                 <div className="flex items-center mb-4">
                   <div className="flex items-center mr-4">
                     {[...Array(5)].map((_, i) => (
@@ -255,8 +304,9 @@ const VenueDetail: React.FC = () => {
                   <span className="text-gray-500 ml-2">({venue.reviews} reviews)</span>
                 </div>
                 <p className="text-gray-600">
-                  Based on {venue.reviews} verified reviews from past events. Guests consistently praise the beautiful atmosphere, professional staff, and attention to detail.
+                  No reviews yet. Be the first to review this venue!
                 </p>
+                )}
               </div>
             </div>
           </div>

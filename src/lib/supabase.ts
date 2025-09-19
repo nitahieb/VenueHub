@@ -110,6 +110,32 @@ export interface Database {
           updated_at?: string;
         };
       };
+      reviews: {
+        Row: {
+          id: string;
+          venue_id: string;
+          user_name: string;
+          rating: number;
+          comment: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          venue_id: string;
+          user_name: string;
+          rating: number;
+          comment: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          venue_id?: string;
+          user_name?: string;
+          rating?: number;
+          comment?: string;
+          created_at?: string;
+        };
+      };
     };
   };
 }

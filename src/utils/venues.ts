@@ -147,7 +147,7 @@ export const createVenue = async (venueData: {
     amenities: venueData.amenities,
     images: venueData.images,
     owner_id: user.id,
-    status: 'pending', // Venues start as pending approval
+    status: 'approved', // Auto-approve venues for now
   };
 
   const { data, error } = await supabase
@@ -204,4 +204,36 @@ export const deleteVenue = async (id: string): Promise<void> => {
     .eq('owner_id', user.id);
 
   if (error) throw error;
+};
+
+export const getVenueReviews = async (venueId: string) => {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('venue_id', venueId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+};
+
+export const createReview = async (reviewData: {
+  venueId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+}) => {
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert({
+      venue_id: reviewData.venueId,
+      user_name: reviewData.userName,
+      rating: reviewData.rating,
+      comment: reviewData.comment,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 };
