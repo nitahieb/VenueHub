@@ -4,11 +4,14 @@ import { Link, useLocation } from 'react-router-dom';
 import { MapPin, MessageSquare, Search, User, LogOut } from 'lucide-react';
 import { getCurrentUser, signOut } from '../utils/auth';
 import type { AuthUser } from '../utils/auth';
+import AuthModal from './AuthModal';
 
 const Header: React.FC = () => {
   const location = useLocation();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
 
   useEffect(() => {
     const loadUser = async () => {
@@ -22,6 +25,21 @@ const Header: React.FC = () => {
 
     loadUser();
   }, []);
+
+  const handleAuthSuccess = async () => {
+    const currentUser = await getCurrentUser();
+    setUser(currentUser);
+  };
+
+  const openSignIn = () => {
+    setAuthMode('signin');
+    setShowAuthModal(true);
+  };
+
+  const openSignUp = () => {
+    setAuthMode('signup');
+    setShowAuthModal(true);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -119,10 +137,16 @@ const Header: React.FC = () => {
               </>
             ) : (
               <div className="flex items-center space-x-2">
-                <button className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors duration-200">
+                <button 
+                  onClick={openSignIn}
+                  className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors duration-200"
+                >
                   Sign In
                 </button>
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
+                <button 
+                  onClick={openSignUp}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+                >
                   Sign Up
                 </button>
               </div>
@@ -130,6 +154,13 @@ const Header: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        mode={authMode}
+        onSuccess={handleAuthSuccess}
+      />
     </header>
   );
 };
