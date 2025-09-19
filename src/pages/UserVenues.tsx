@@ -44,12 +44,38 @@ const UserVenues: React.FC = () => {
   };
 
   // For now, all venues are approved since they're in the database
-  const getStatusBadge = () => (
-    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-      <CheckCircle className="h-3 w-3 mr-1" />
-      Live
-    </span>
-  );
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Live
+          </span>
+        );
+      case 'pending':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending Review
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <XCircle className="h-3 w-3 mr-1" />
+            Rejected
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <Clock className="h-3 w-3 mr-1" />
+            Unknown
+          </span>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -160,7 +186,7 @@ const UserVenues: React.FC = () => {
                         </p>
                       </div>
                       <div className="ml-4">
-                        {getStatusBadge()}
+                        {getStatusBadge(venue.status)}
                       </div>
                     </div>
 
@@ -173,13 +199,23 @@ const UserVenues: React.FC = () => {
 
                     {/* Actions */}
                     <div className="flex space-x-3">
-                      <Link
-                        to={`/venue/${venue.id}`}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1"
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span>View Live</span>
-                      </Link>
+                      {venue.status === 'approved' ? (
+                        <Link
+                          to={`/venue/${venue.id}`}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>View Live</span>
+                        </Link>
+                      ) : (
+                        <Link
+                          to={`/venue/${venue.id}`}
+                          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>Preview</span>
+                        </Link>
+                      )}
                       <button
                         onClick={() => handleDeleteVenue(venue.id)}
                         className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1"

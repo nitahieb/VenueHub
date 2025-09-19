@@ -32,6 +32,8 @@ const convertToVenue = (row: VenueRow): Venue => ({
   reviews: row.reviews_count,
   availability: row.availability,
   featured: row.featured,
+  status: row.status,
+  owner_id: row.owner_id,
 });
 
 export const getAllVenues = async (): Promise<Venue[]> => {
@@ -50,7 +52,6 @@ export const getVenueById = async (id: string): Promise<Venue | null> => {
     .from('venues')
     .select('*')
     .eq('id', id)
-    .eq('status', 'approved')
     .single();
 
   if (error) {

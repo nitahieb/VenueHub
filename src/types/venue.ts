@@ -23,6 +23,8 @@ export interface Venue {
   reviews: number;
   availability: boolean;
   featured: boolean;
+  status: string;
+  owner_id: string | null;
 }
 
 export type VenueCategory = 

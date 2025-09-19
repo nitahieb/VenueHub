@@ -16,22 +16,41 @@ import {
   ArrowLeft,
   Calendar,
   Phone,
-  Mail
+  Mail,
+  AlertCircle
 } from 'lucide-react';
 import { getVenueById } from '../utils/venues';
+import { getCurrentUser } from '../utils/auth';
 import { Venue } from '../types/venue';
 
 const VenueDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [venue, setVenue] = useState<Venue | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     const loadVenue = async () => {
       if (!id) return;
       
       try {
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+        
         const venueData = await getVenueById(id);
+        
+        // Check if venue exists and user has permission to view it
+        if (!venueData) {
+          setVenue(null);
+          return;
+        }
+        
+        // If venue is not approved and user is not the owner, treat as not found
+        if (venueData.status !== 'approved' && (!user || user.id !== venueData.owner_id)) {
+          setVenue(null);
+          return;
+        }
+        
         setVenue(venueData);
       } catch (error) {
         console.error('Error loading venue:', error);
@@ -110,6 +129,23 @@ const VenueDetail: React.FC = () => {
 
       {/* Image Gallery */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Pending Status Banner */}
+        {venue.status === 'pending' && currentUser?.id === venue.owner_id && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-yellow-600 mr-3" />
+              <div>
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Venue Pending Review
+                </h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Your venue is currently under review. It will be visible to the public once approved.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
           <div className="lg:col-span-2">
             <img
