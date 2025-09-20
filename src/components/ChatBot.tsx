@@ -34,7 +34,7 @@ const ChatBot: React.FC = () => {
       
       const apiUrl = 'https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/chat';
       
-      const response = await fetch(apiUrl, {
+      const apiResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,19 +44,21 @@ const ChatBot: React.FC = () => {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Smythos API error:', response.status, errorData);
-        throw new Error(`Smythos API error: ${response.status}`);
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json().catch(() => ({}));
+        console.error('Smythos API error:', apiResponse.status, errorData);
+        throw new Error(`Smythos API error: ${apiResponse.status}`);
       }
 
-      const data = await response.json();
+      const data = await apiResponse.json();
       console.log('Smythos API response:', data);
 
       // Extract response text and venues from Smythos response
       response = data.response_text || data.response || "I found some great venues for you!";
       
       // Transform Smythos venues to match our Venue interface
+      if (data.venues && Array.isArray(data.venues)) {
+        venueRecommendations = data.venues.map((venue: any) => ({
           id: venue.id,
           name: venue.name,
           description: venue.description,
