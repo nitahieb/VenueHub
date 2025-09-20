@@ -22,8 +22,8 @@ const convertToVenue = (row: VenueRow): Venue => ({
     standing: row.standing_capacity,
   },
   price: {
-    hourly: row.hourly_price,
-    daily: row.daily_price,
+    hourly: row.hourly_price / 100, // Convert from cents to dollars
+    daily: row.daily_price / 100, // Convert from cents to dollars
   },
   amenities: row.amenities,
   images: row.images,

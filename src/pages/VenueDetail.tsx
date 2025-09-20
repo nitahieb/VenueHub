@@ -323,10 +323,10 @@ const VenueDetail: React.FC = () => {
             <div className="sticky top-8 bg-white rounded-xl shadow-lg p-6 border">
               <div className="mb-6">
                 <div className="text-3xl font-bold text-gray-900 mb-2">
-                  ${venue.price.hourly}<span className="text-lg font-normal text-gray-600">/hour</span>
+                  ${venue.price.hourly.toLocaleString()}<span className="text-lg font-normal text-gray-600">/hour</span>
                 </div>
                 <div className="text-gray-600">
-                  ${venue.price.daily}/day
+                  ${venue.price.daily.toLocaleString()}/day
                 </div>
               </div>
 
