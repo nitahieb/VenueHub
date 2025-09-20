@@ -256,9 +256,6 @@ const SemanticSearch: React.FC = () => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium mb-2">
-                        {Math.round((result.max_similarity || 0) * 100)}% match
-                      </div>
                       {result.review_matches > 0 && (
                         <div className="text-xs text-gray-500">
                           {result.review_matches} review matches
