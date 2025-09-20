@@ -120,17 +120,25 @@ async function callSemanticSearch(
   includeReviews: boolean
 ) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
   
-  if (!supabaseUrl || !supabaseServiceKey) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Supabase configuration not found');
   }
+
+  console.log('Calling semantic-search with:', {
+    embedding_length: queryEmbedding.length,
+    original_query: originalQuery,
+    match_threshold: matchThreshold,
+    match_count: matchCount,
+    include_reviews: includeReviews
+  });
 
   const response = await fetch(`${supabaseUrl}/functions/v1/semantic-search`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${supabaseServiceKey}`,
+      'Authorization': `Bearer ${supabaseAnonKey}`,
     },
     body: JSON.stringify({
       query_embedding: queryEmbedding,
@@ -142,11 +150,23 @@ async function callSemanticSearch(
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(`Semantic search failed: ${response.status} - ${JSON.stringify(errorData)}`);
+    const errorText = await response.text().catch(() => 'Unknown error');
+    console.error('Semantic search API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: errorText
+    });
+    throw new Error(`Semantic search failed: ${response.status} - ${errorText}`);
   }
 
-  return await response.json();
+  const result = await response.json();
+  console.log('Semantic search response:', {
+    total_results: result.total_results,
+    search_time_ms: result.search_time_ms,
+    results_count: result.results?.length || 0
+  });
+  
+  return result;
 }
 
 /**
