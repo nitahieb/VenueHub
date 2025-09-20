@@ -2,14 +2,13 @@
  * Smythos Venue Search Edge Function
  * 
  * This function provides a simplified API for the Smythos agent to get venue recommendations.
- * It handles the complete workflow:
+ * It handles the complete workflow by:
  * 1. Accept natural language query from Smythos
- * 2. Generate embedding using VoyageAI
+ * 2. Generate embedding using VoyageAI (client-side approach)
  * 3. Call the semantic-search function internally
- * 4. Return formatted venue recommendations
+ * 4. Return formatted venue recommendations without images
  * 
- * This keeps the VoyageAI API key secure on the server side and provides a clean
- * interface for the Smythos agent to interact with.
+ * This keeps the VoyageAI API key secure and provides a clean interface for Smythos.
  */
 
 interface SmythosVenueSearchRequest {
@@ -42,7 +41,6 @@ interface SmythosVenueSearchResponse {
       daily: number;
     };
     amenities: string[];
-    images: string[];
     category: string;
     rating: number;
     reviews: number;
@@ -152,7 +150,7 @@ async function callSemanticSearch(
 }
 
 /**
- * Transform venue details to match the expected format for Smythos
+ * Transform venue details to match the expected format for Smythos (without images)
  */
 function transformVenueForSmythos(venueDetails: any, similarityScore: number) {
   return {
@@ -182,6 +180,7 @@ function transformVenueForSmythos(venueDetails: any, similarityScore: number) {
     availability: venueDetails.availability,
     featured: venueDetails.featured,
     similarity_score: similarityScore,
+    // Note: images are intentionally excluded for Smythos
   };
 }
 
@@ -307,7 +306,7 @@ Deno.serve(async (req: Request) => {
       includeReviews
     );
 
-    // Step 3: Transform results for Smythos
+    // Step 3: Transform results for Smythos (exclude images)
     const transformedVenues = semanticSearchResponse.results
       .filter((result: any) => result.venue_details) // Only include results with full venue details
       .map((result: any) => transformVenueForSmythos(result.venue_details, result.similarity_score));
