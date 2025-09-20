@@ -268,6 +268,15 @@ export const searchVenuesSemantic = async (
     return [];
   }
   
+  // Generate query embedding client-side
+  console.log('Generating query embedding client-side...');
+  const queryEmbedding = await generateQueryEmbedding(query);
+  
+  if (!queryEmbedding) {
+    console.error('Failed to generate query embedding');
+    return [];
+  }
+  
   // Get authentication token
   let authToken = supabaseAnonKey;
   try {
@@ -287,7 +296,8 @@ export const searchVenuesSemantic = async (
         'Authorization': `Bearer ${authToken}`,
       },
       body: JSON.stringify({
-        query,
+        query_embedding: queryEmbedding,
+        original_query: query,
         match_threshold: matchThreshold,
         match_count: matchCount,
         include_reviews: includeReviews,
@@ -337,6 +347,15 @@ export const searchVenuesSemanticWithDetails = async (
     return [];
   }
   
+  // Generate query embedding client-side
+  console.log('Generating query embedding client-side...');
+  const queryEmbedding = await generateQueryEmbedding(query);
+  
+  if (!queryEmbedding) {
+    console.error('Failed to generate query embedding');
+    return [];
+  }
+  
   // Get authentication token
   let authToken = supabaseAnonKey;
   try {
@@ -356,7 +375,8 @@ export const searchVenuesSemanticWithDetails = async (
         'Authorization': `Bearer ${authToken}`,
       },
       body: JSON.stringify({
-        query,
+        query_embedding: queryEmbedding,
+        original_query: query,
         match_threshold: matchThreshold,
         match_count: matchCount,
         include_reviews: true,

@@ -16,7 +16,8 @@
  */
 
 interface SemanticSearchRequest {
-  query: string;
+  query_embedding: number[];
+  original_query?: string;
   match_threshold?: number;
   match_count?: number;
   include_reviews?: boolean;
@@ -34,20 +35,10 @@ interface SemanticSearchResponse {
     review_matches: number;
     venue_details?: any;
   }>;
-  query: string;
+  original_query: string;
   total_results: number;
   search_time_ms: number;
-  embedding_generated: boolean;
-}
-
-interface VoyageAIResponse {
-  data: Array<{
-    embedding: number[];
-  }>;
-  model: string;
-  usage: {
-    total_tokens: number;
-  };
+  embedding_provided_by_client: boolean;
 }
 
 const corsHeaders = {
@@ -55,44 +46,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
-
-/**
- * Generate query embedding using VoyageAI
- * Optimized for search queries with input_type: 'query'
- */
-async function generateQueryEmbedding(query: string): Promise<number[] | null> {
-  const apiKey = Deno.env.get("VITE_VOYAGEAI_API_KEY");
-  
-  if (!apiKey) {
-    console.warn("VoyageAI API key not found");
-    return null;
-  }
-
-  try {
-    const response = await fetch("https://api.voyageai.com/v1/embeddings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        input: [query],
-        model: "voyage-3-large", // 1024 dimensions, high quality
-        input_type: "query", // Optimized for search queries
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`VoyageAI API error: ${response.status}`);
-    }
-
-    const data: VoyageAIResponse = await response.json();
-    return data.data[0]?.embedding || null;
-  } catch (error) {
-    console.error("Error generating query embedding:", error);
-    return null;
-  }
-}
 
 /**
  * Perform semantic search using database function
@@ -189,9 +142,26 @@ Deno.serve(async (req: Request) => {
     }
 
     // Validate required parameters
-    if (!searchParams.query || searchParams.query.trim().length === 0) {
+    if (!searchParams.query_embedding || !Array.isArray(searchParams.query_embedding) || searchParams.query_embedding.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Query parameter is required and cannot be empty" }),
+        JSON.stringify({ error: "query_embedding parameter is required and must be a non-empty array" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    // Validate embedding dimensions (VoyageAI voyage-3-large uses 1024 dimensions)
+    if (searchParams.query_embedding.length !== 1024) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid embedding dimensions", 
+          details: `Expected 1024 dimensions, got ${searchParams.query_embedding.length}` 
+        }),
         {
           status: 400,
           headers: {
@@ -206,26 +176,11 @@ Deno.serve(async (req: Request) => {
     const matchThreshold = searchParams.match_threshold || 0.7;
     const matchCount = Math.min(searchParams.match_count || 10, 50); // Cap at 50 results
     const includeReviews = searchParams.include_reviews !== false;
+    const originalQuery = searchParams.original_query || "semantic search";
 
-    // Generate query embedding
-    console.log(`Generating embedding for query: "${searchParams.query}"`);
-    const queryEmbedding = await generateQueryEmbedding(searchParams.query);
-
-    if (!queryEmbedding) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Failed to generate embedding for query",
-          details: "VoyageAI API may be unavailable or API key is missing"
-        }),
-        {
-          status: 500,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        }
-      );
-    }
+    // Use the provided query embedding
+    console.log(`Performing semantic search with provided embedding (${searchParams.query_embedding.length} dimensions)`);
+    const queryEmbedding = searchParams.query_embedding;
 
     // Initialize Supabase client
     const { createClient } = await import("npm:@supabase/supabase-js@2");
@@ -263,10 +218,10 @@ Deno.serve(async (req: Request) => {
         review_matches: result.review_matches,
         venue_details: result.venue_details || undefined,
       })),
-      query: searchParams.query,
+      original_query: originalQuery,
       total_results: enrichedResults.length,
       search_time_ms: searchTimeMs,
-      embedding_generated: true,
+      embedding_provided_by_client: true,
     };
 
     console.log(`Search completed in ${searchTimeMs}ms, found ${enrichedResults.length} results`);
@@ -289,7 +244,7 @@ Deno.serve(async (req: Request) => {
         error: "Internal server error during semantic search",
         details: error instanceof Error ? error.message : "Unknown error",
         search_time_ms: searchTimeMs,
-        embedding_generated: false,
+        embedding_provided_by_client: false,
       }),
       {
         status: 500,
