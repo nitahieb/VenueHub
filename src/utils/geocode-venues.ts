@@ -120,7 +120,7 @@ export const geocodeVenue = async (venueId: string) => {
         longitude: coordinates.longitude
       },
     { returning: 'representation' })
-      .eq('id', venueId);
+      .eq('id', Number(venueId));
 
     if (updateError) {
       console.error('Error updating venue coordinates:', updateError);
