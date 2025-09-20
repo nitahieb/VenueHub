@@ -16,6 +16,12 @@ interface SmythosHybridSearchRequest {
     max_price?: number;
     featured?: boolean;
     min_rating?: number;
+    max_hourly_price?: number;
+    max_daily_price?: number;
+    min_hourly_price?: number;
+    min_daily_price?: number;
+    amenities?: string[];
+    availability?: boolean;
   };
   match_threshold?: number;
   match_count?: number;
@@ -146,6 +152,26 @@ function applySqlFilters(query: any, filters: any): { query: any; appliedFilters
     appliedFilters.push(`hourly_price <= ${filters.max_price * 100}`);
   }
   
+  if (filters.max_hourly_price) {
+    query = query.lte('hourly_price', filters.max_hourly_price * 100); // Convert to cents
+    appliedFilters.push(`hourly_price <= ${filters.max_hourly_price * 100}`);
+  }
+  
+  if (filters.min_hourly_price) {
+    query = query.gte('hourly_price', filters.min_hourly_price * 100); // Convert to cents
+    appliedFilters.push(`hourly_price >= ${filters.min_hourly_price * 100}`);
+  }
+  
+  if (filters.max_daily_price) {
+    query = query.lte('daily_price', filters.max_daily_price * 100); // Convert to cents
+    appliedFilters.push(`daily_price <= ${filters.max_daily_price * 100}`);
+  }
+  
+  if (filters.min_daily_price) {
+    query = query.gte('daily_price', filters.min_daily_price * 100); // Convert to cents
+    appliedFilters.push(`daily_price >= ${filters.min_daily_price * 100}`);
+  }
+  
   if (filters.featured !== undefined) {
     query = query.eq('featured', filters.featured);
     appliedFilters.push(`featured = ${filters.featured}`);
@@ -154,6 +180,16 @@ function applySqlFilters(query: any, filters: any): { query: any; appliedFilters
   if (filters.min_rating) {
     query = query.gte('rating', filters.min_rating);
     appliedFilters.push(`rating >= ${filters.min_rating}`);
+  }
+  
+  if (filters.amenities && filters.amenities.length > 0) {
+    query = query.overlaps('amenities', filters.amenities);
+    appliedFilters.push(`amenities overlaps [${filters.amenities.join(', ')}]`);
+  }
+  
+  if (filters.availability !== undefined) {
+    query = query.eq('availability', filters.availability);
+    appliedFilters.push(`availability = ${filters.availability}`);
   }
   
   return { query, appliedFilters };
