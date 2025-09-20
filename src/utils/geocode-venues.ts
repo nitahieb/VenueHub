@@ -40,7 +40,8 @@ export const geocodeExistingVenues = async (): Promise<{
             latitude: coordinates.latitude,
             longitude: coordinates.longitude
           })
-          .eq('id', venue.id);
+          .eq('id', venue.id)
+          .select();
 
         if (updateError) {
           console.error(`Error updating venue ${venue.name}:`, updateError);
