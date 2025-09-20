@@ -18,6 +18,10 @@ const Admin: React.FC = () => {
       const results = await geocodeExistingVenues();
       setGeocodingResults(results);
       
+      if (results.success > 0) {
+        alert(`Successfully geocoded ${results.success} venues!`);
+      }
+      
     } catch (error) {
       console.error('Error during geocoding:', error);
       alert('Error during geocoding. Please check the console for details.');

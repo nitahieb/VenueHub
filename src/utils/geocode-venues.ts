@@ -9,8 +9,6 @@ export const geocodeExistingVenues = async (): Promise<{
   errors: number;
   total: number;
 }> => {
-  console.log('Starting to geocode existing venues...');
-  
   // Get all venues without coordinates
   const { data: venues, error } = await supabase
     .from('venues')
@@ -18,16 +16,12 @@ export const geocodeExistingVenues = async (): Promise<{
     .or('latitude.is.null,longitude.is.null');
 
   if (error) {
-    console.error('Error fetching venues:', error);
     throw error;
   }
 
   if (!venues || venues.length === 0) {
-    console.log('No venues need geocoding');
     return { success: 0, errors: 0, total: 0 };
   }
-
-  console.log(`Found ${venues.length} venues to geocode`);
 
   let successCount = 0;
   let errorCount = 0;
@@ -35,7 +29,6 @@ export const geocodeExistingVenues = async (): Promise<{
   for (const venue of venues) {
     try {
       const fullAddress = `${venue.address}, ${venue.city}, ${venue.state} ${venue.zip_code}`;
-      console.log(`Geocoding: ${venue.name} - ${fullAddress}`);
       
       const coordinates = await geocodeAddress(fullAddress);
       
@@ -53,16 +46,16 @@ export const geocodeExistingVenues = async (): Promise<{
           console.error(`Error updating venue ${venue.name}:`, updateError);
           errorCount++;
         } else {
-          console.log(`✅ Successfully geocoded: ${venue.name} (${coordinates.latitude}, ${coordinates.longitude})`);
+          console.log(`Successfully geocoded: ${venue.name} (${coordinates.latitude}, ${coordinates.longitude})`);
           successCount++;
         }
       } else {
-        console.warn(`❌ Could not geocode: ${venue.name} - ${fullAddress}`);
+        console.warn(`Could not geocode: ${venue.name} - ${fullAddress}`);
         errorCount++;
       }
 
       // Add a small delay to be respectful to the geocoding API
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
     } catch (error) {
       console.error(`Error geocoding venue ${venue.name}:`, error);
@@ -70,10 +63,6 @@ export const geocodeExistingVenues = async (): Promise<{
     }
   }
 
-  console.log(`\n🎉 Geocoding complete!`);
-  console.log(`✅ Successfully geocoded: ${successCount} venues`);
-  console.log(`❌ Failed to geocode: ${errorCount} venues`);
-  
   return {
     success: successCount,
     errors: errorCount,
