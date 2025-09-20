@@ -31,7 +31,7 @@ export const geocodeExistingVenues = async (): Promise<{
       const fullAddress = `${venue.address}, ${venue.city}, ${venue.state} ${venue.zip_code}`;
       
       const coordinates = await geocodeAddress(fullAddress);
-      
+      console.log(coordinates)
       if (coordinates) {
         // Update the venue with coordinates
         const { error: updateError } = await supabase
