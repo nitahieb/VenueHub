@@ -9,6 +9,8 @@ export const geocodeExistingVenues = async (): Promise<{
   errors: number;
   total: number;
 }> => {
+  console.log('Starting geocoding process...');
+  
   // Get all venues without coordinates
   const { data: venues, error } = await supabase
     .from('venues')
@@ -16,10 +18,14 @@ export const geocodeExistingVenues = async (): Promise<{
     .or('latitude.is.null,longitude.is.null');
 
   if (error) {
+    console.error('Error fetching venues:', error);
     throw error;
   }
 
+  console.log(`Found ${venues?.length || 0} venues to geocode:`, venues);
+
   if (!venues || venues.length === 0) {
+    console.log('No venues need geocoding');
     return { success: 0, errors: 0, total: 0 };
   }
 
@@ -29,8 +35,11 @@ export const geocodeExistingVenues = async (): Promise<{
   for (const venue of venues) {
     try {
       const fullAddress = `${venue.address}, ${venue.city}, ${venue.state} ${venue.zip_code}`;
+      console.log(`Geocoding venue: ${venue.name} - ${fullAddress}`);
       
       const coordinates = await geocodeAddress(fullAddress);
+      console.log(`Geocoding result for ${venue.name}:`, coordinates);
+      
       if (coordinates) {
         // Update the venue with coordinates
         const { error: updateError } = await supabase
@@ -43,11 +52,24 @@ export const geocodeExistingVenues = async (): Promise<{
           .select();
 
         if (updateError) {
-          console.error(`Error updating venue ${venue.name}:`, updateError);
+          console.error(`Database update error for ${venue.name}:`, updateError);
           errorCount++;
         } else {
           console.log(`Successfully geocoded: ${venue.name} (${coordinates.latitude}, ${coordinates.longitude})`);
           successCount++;
+          
+          // Verify the update worked
+          const { data: verifyData, error: verifyError } = await supabase
+            .from('venues')
+            .select('latitude, longitude')
+            .eq('id', venue.id)
+            .single();
+          
+          if (verifyError) {
+            console.error(`Verification error for ${venue.name}:`, verifyError);
+          } else {
+            console.log(`Verification for ${venue.name}:`, verifyData);
+          }
         }
       } else {
         console.warn(`Could not geocode: ${venue.name} - ${fullAddress}`);
@@ -63,6 +85,8 @@ export const geocodeExistingVenues = async (): Promise<{
     }
   }
 
+  console.log(`Geocoding complete. Success: ${successCount}, Errors: ${errorCount}, Total: ${venues.length}`);
+  
   return {
     success: successCount,
     errors: errorCount,

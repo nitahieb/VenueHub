@@ -15,16 +15,22 @@ const Admin: React.FC = () => {
     setGeocodingResults(null);
     
     try {
+      console.log('Starting geocoding from admin panel...');
       const results = await geocodeExistingVenues();
+      console.log('Geocoding results:', results);
       setGeocodingResults(results);
       
       if (results.success > 0) {
         alert(`Successfully geocoded ${results.success} venues!`);
+      } else if (results.total === 0) {
+        alert('No venues found that need geocoding. All venues already have coordinates.');
+      } else {
+        alert(`Geocoding completed with ${results.errors} errors. Check console for details.`);
       }
       
     } catch (error) {
       console.error('Error during geocoding:', error);
-      alert('Error during geocoding. Please check the console for details.');
+      alert(`Error during geocoding: ${error instanceof Error ? error.message : 'Unknown error'}. Check console for details.`);
     } finally {
       setIsGeocoding(false);
     }
