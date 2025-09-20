@@ -32,20 +32,12 @@ const ChatBot: React.FC = () => {
       // Call Smythos API
       console.log('Calling Smythos API with message:', userMessage);
       
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Supabase configuration not found');
-      }
-      
-      const apiUrl = `${supabaseUrl}/functions/v1/smythos-chat-proxy`;
+      const apiUrl = 'https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/chat';
       
       const apiResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
         },
         body: JSON.stringify({
           message: userMessage
