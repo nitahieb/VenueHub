@@ -29,12 +29,20 @@ const ChatBot: React.FC = () => {
     let venueRecommendations = [];
     
     try {
-      console.log('Calling Smythos API with requirements:', userMessage);
+      console.log('Calling Smythos API via proxy with requirements:', userMessage);
       
-      const apiResponse = await fetch('https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/api/find_venues', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase configuration not found');
+      }
+      
+      const apiResponse = await fetch(`${supabaseUrl}/functions/v1/smythos-chat-proxy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
         },
         body: JSON.stringify({
           requirements: userMessage
@@ -42,17 +50,21 @@ const ChatBot: React.FC = () => {
       });
 
       if (!apiResponse.ok) {
-        throw new Error(`Smythos API error: ${apiResponse.status}`);
+        throw new Error(`Proxy API error: ${apiResponse.status}`);
       }
 
-      const responseText = await apiResponse.text();
+      const responseData = await apiResponse.json();
+      
+      if (!responseData.success) {
+        throw new Error(responseData.error || 'Unknown error from proxy');
+      }
 
-      response = responseText || "I found some great venues for you!";
+      response = responseData.response || "I found some great venues for you!";
       venueRecommendations = [];
       
     } catch (error) {
-      console.error('Error calling Smythos API:', error);
-      response = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment or check your internet connection.";
+      console.error('Error calling Smythos API via proxy:', error);
+      response = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
       venueRecommendations = [];
     }
 
