@@ -29,10 +29,10 @@ const ChatBot: React.FC = () => {
     let venueRecommendations = [];
     
     try {
-      // Call Smythos API
-      console.log('Calling Smythos API with message:', userMessage);
+      // Call Smythos venue finder API
+      console.log('Calling Smythos venue finder API with requirements:', userMessage);
       
-      const apiUrl = 'https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/chat';
+      const apiUrl = 'https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/api/find_venues';
       
       const apiResponse = await fetch(apiUrl, {
         method: 'POST',
@@ -40,7 +40,7 @@ const ChatBot: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: userMessage
+          requirements: userMessage
         }),
       });
 
@@ -50,45 +50,15 @@ const ChatBot: React.FC = () => {
         throw new Error(`Smythos API error: ${apiResponse.status}`);
       }
 
-      const data = await apiResponse.json();
-      console.log('Smythos API response:', data);
+      const responseText = await apiResponse.text();
+      console.log('Smythos API response:', responseText);
 
-      // Extract response text and venues from Smythos response
-      response = data.response_text || data.response || "I found some great venues for you!";
+      // The API returns plain text response
+      response = responseText || "I found some great venues for you!";
       
-      // Transform Smythos venues to match our Venue interface
-      if (data.venues && Array.isArray(data.venues)) {
-        venueRecommendations = data.venues.map((venue: any) => ({
-          id: venue.id,
-          name: venue.name,
-          description: venue.description,
-          location: {
-            address: venue.location?.address || venue.address || '',
-            city: venue.location?.city || venue.city || '',
-            state: venue.location?.state || venue.state || '',
-            zipCode: venue.location?.zipCode || venue.location?.zip_code || venue.zip_code || '',
-            latitude: venue.location?.latitude || venue.latitude,
-            longitude: venue.location?.longitude || venue.longitude,
-          },
-          capacity: {
-            seated: venue.capacity?.seated || venue.seated_capacity || 0,
-            standing: venue.capacity?.standing || venue.standing_capacity || 0,
-          },
-          price: {
-            hourly: venue.price?.hourly || venue.hourly_price || 0,
-            daily: venue.price?.daily || venue.daily_price || 0,
-          },
-          amenities: venue.amenities || [],
-          images: venue.images || [], // Default to empty array if not provided
-          category: venue.category || 'modern',
-          rating: venue.rating || 0,
-          reviews: venue.reviews || venue.reviews_count || 0,
-          availability: venue.availability !== false, // Default to true unless explicitly false
-          featured: venue.featured || false,
-          status: 'approved', // Default status for Smythos venues
-          owner_id: null, // Default owner_id for Smythos venues
-        })).slice(0, 3); // Limit to 3 recommendations for UI
-      }
+      // Note: The API returns text response only, no venue objects
+      // Venue recommendations would need to be parsed from the text or handled differently
+      venueRecommendations = [];
       
     } catch (error) {
       console.error('Error calling Smythos API:', error);
