@@ -290,9 +290,13 @@ Deno.serve(async (req: Request) => {
     const matchCount = Math.min(searchParams.match_count || 10, 50);
     const includeReviews = searchParams.include_reviews !== false;
 
-    console.log(`Processing Smythos hybrid search request`);
-    console.log('Semantic query:', searchParams.semantic_query);
-    console.log('SQL filters:', searchParams.sql_filters);
+    console.log('=== SMYTHOS HYBRID SEARCH REQUEST ===');
+    console.log('Semantic Query:', searchParams.semantic_query || 'None provided');
+    console.log('SQL Filters:', JSON.stringify(searchParams.sql_filters, null, 2));
+    console.log('Match Threshold:', matchThreshold);
+    console.log('Match Count:', matchCount);
+    console.log('Include Reviews:', includeReviews);
+    console.log('=====================================');
 
     // Initialize Supabase client
     const { createClient } = await import("npm:@supabase/supabase-js@2");
@@ -301,7 +305,7 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     // Step 1: Apply SQL filters to get initial venue set
-    console.log('Applying SQL filters...');
+    console.log('=== STEP 1: APPLYING SQL FILTERS ===');
     let venuesQuery = supabase
       .from('venues')
       .select('*')
@@ -314,6 +318,9 @@ Deno.serve(async (req: Request) => {
       const filterResult = applySqlFilters(venuesQuery, searchParams.sql_filters);
       venuesQuery = filterResult.query;
       appliedFilters = appliedFilters.concat(filterResult.appliedFilters);
+      console.log('Applied SQL Filters:', appliedFilters);
+    } else {
+      console.log('No additional SQL filters provided, using defaults only');
     }
 
     const { data: filteredVenues, error: sqlError } = await venuesQuery
@@ -342,17 +349,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`SQL filtering found ${filteredVenues?.length || 0} venues`);
+    console.log(`✅ SQL filtering completed: Found ${filteredVenues?.length || 0} venues`);
+    if (filteredVenues && filteredVenues.length > 0) {
+      console.log('Sample filtered venues:', filteredVenues.slice(0, 3).map(v => ({ id: v.id, name: v.name, category: v.category })));
+    }
+    console.log('===================================');
 
     let finalVenues = filteredVenues || [];
     
     // Step 2: Apply semantic search if semantic query is provided
     if (searchParams.semantic_query && searchParams.semantic_query.trim()) {
-      console.log('Generating query embedding...');
+      console.log('=== STEP 2: SEMANTIC SEARCH ===');
+      console.log('Generating embedding for query:', `"${searchParams.semantic_query.trim()}"`);
       const queryEmbedding = await generateQueryEmbedding(searchParams.semantic_query.trim());
 
       if (queryEmbedding && finalVenues.length > 0) {
-        console.log('Performing semantic search on filtered venues...');
+        console.log(`✅ Embedding generated (${queryEmbedding.length} dimensions)`);
+        console.log('Calling semantic-search function with parameters:');
+        console.log('- Match Threshold:', matchThreshold);
+        console.log('- Match Count:', matchCount * 2, '(doubled for filtering)');
+        console.log('- Include Reviews:', includeReviews);
         
         // For now, we'll use a simpler approach: call the semantic-search function
         // and then filter the results to only include venues from our SQL filter
@@ -373,6 +389,7 @@ Deno.serve(async (req: Request) => {
         });
 
         if (response.ok) {
+          console.log('✅ Semantic search API call successful');
           const semanticResults = await response.json();
           const filteredVenueIds = new Set(finalVenues.map(v => v.id));
           
@@ -383,22 +400,38 @@ Deno.serve(async (req: Request) => {
             .map((result: any) => transformVenueForSmythos(result.venue_details, result.similarity_score));
           
           finalVenues = hybridResults;
-          console.log(`Hybrid search found ${finalVenues.length} venues`);
+          console.log(`✅ Hybrid search completed: ${finalVenues.length} venues after semantic filtering`);
+          if (finalVenues.length > 0) {
+            console.log('Top results with similarity scores:');
+            finalVenues.slice(0, 3).forEach((venue, i) => {
+              console.log(`  ${i + 1}. ${venue.name} (similarity: ${venue.similarity_score})`);
+            });
+          }
         } else {
-          console.warn('Semantic search failed, using SQL-filtered results only');
+          const errorText = await response.text().catch(() => 'Unknown error');
+          console.warn('❌ Semantic search API call failed:', response.status, errorText);
+          console.log('Falling back to SQL-filtered results only');
           finalVenues = finalVenues.slice(0, matchCount).map(venue => transformVenueForSmythos(venue));
         }
       } else {
-        console.log('No embedding generated or no venues to search, using SQL-filtered results only');
+        console.log('❌ No embedding generated or no venues to search, using SQL-filtered results only');
         finalVenues = finalVenues.slice(0, matchCount).map(venue => transformVenueForSmythos(venue));
       }
+      console.log('===============================');
     } else {
-      console.log('No semantic query provided, using SQL-filtered results only');
+      console.log('=== STEP 2: SKIPPED (No semantic query) ===');
+      console.log('Using SQL-filtered results only');
       finalVenues = finalVenues.slice(0, matchCount).map(venue => transformVenueForSmythos(venue));
+      console.log('==========================================');
     }
 
     const searchTimeMs = Date.now() - startTime;
-    console.log(`Hybrid search completed in ${searchTimeMs}ms`);
+    console.log('=== FINAL RESULTS ===');
+    console.log(`🎯 Hybrid search completed in ${searchTimeMs}ms`);
+    console.log(`📊 Results: ${finalVenues.length} venues returned`);
+    console.log(`🔍 SQL Filters Applied: ${appliedFilters.length}`);
+    console.log(`🧠 Semantic Query: ${searchParams.semantic_query ? 'Yes' : 'No'}`);
+    console.log('====================');
 
     // Return formatted response
     const response: SmythosHybridSearchResponse = {
