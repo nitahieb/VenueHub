@@ -102,7 +102,13 @@ export const searchVenues = async (filters: {
     });
     
     if (geoError) throw geoError;
-    venueIds = geoData || [];
+    
+    // Ensure geoData is an array of venue ID strings
+    if (geoData && Array.isArray(geoData)) {
+      venueIds = geoData.map(item => typeof item === 'string' ? item : item.id || item.venue_id).filter(Boolean);
+    } else {
+      venueIds = [];
+    }
   }
 
   let query = supabase
