@@ -41,46 +41,39 @@ export const geocodeExistingVenues = async (): Promise<{
       console.log(`Geocoding result for ${venue.name}:`, coordinates);
       
       if (coordinates) {
-        // Update the venue with coordinates
-        const { error: updateError } = await supabase
+        // Force numeric ID match if your id column is integer
+        const idValue = typeof venue.id === 'string' ? Number(venue.id) : venue.id;
+
+        // Update the venue with coordinates and return the updated row
+        const { data: updatedRows, error: updateError } = await supabase
           .from('venues')
           .update({
             latitude: coordinates.latitude,
             longitude: coordinates.longitude
-          })
-          .eq('id', venue.id)
+          }, { returning: 'representation' }) // force returning updated rows
+          .eq('id', idValue)
           .select();
 
         if (updateError) {
           console.error(`Database update error for ${venue.name}:`, updateError);
           errorCount++;
+        } else if (!updatedRows || updatedRows.length === 0) {
+          console.warn(`⚠️ No rows were updated for ${venue.name} (id=${venue.id}). Check ID type or RLS policy.`);
+          errorCount++;
         } else {
-          console.log(`Successfully geocoded: ${venue.name} (${coordinates.latitude}, ${coordinates.longitude})`);
+          console.log(`✅ Successfully updated:`, updatedRows[0]);
           successCount++;
-          
-          // Verify the update worked
-          const { data: verifyData, error: verifyError } = await supabase
-            .from('venues')
-            .select('latitude, longitude')
-            .eq('id', venue.id)
-            .single();
-          
-          if (verifyError) {
-            console.error(`Verification error for ${venue.name}:`, verifyError);
-          } else {
-            console.log(`Verification for ${venue.name}:`, verifyData);
-          }
         }
       } else {
         console.warn(`Could not geocode: ${venue.name} - ${fullAddress}`);
         errorCount++;
       }
 
-      // Add a small delay to be respectful to the geocoding API
+      // Add a small delay to respect API rate limits
       await new Promise(resolve => setTimeout(resolve, 200));
       
-    } catch (error) {
-      console.error(`Error geocoding venue ${venue.name}:`, error);
+    } catch (err) {
+      console.error(`Error geocoding venue ${venue.name}:`, err);
       errorCount++;
     }
   }
@@ -92,42 +85,4 @@ export const geocodeExistingVenues = async (): Promise<{
     errors: errorCount,
     total: venues.length
   };
-};
-
-/**
- * Geocode a single venue by ID
- */
-export const geocodeVenue = async (venueId: string) => {
-  const { data: venue, error } = await supabase
-    .from('venues')
-    .select('id, name, address, city, state, zip_code')
-    .eq('id', venueId)
-    .single();
-
-  if (error || !venue) {
-    console.error('Error fetching venue:', error);
-    return null;
-  }
-
-  const fullAddress = `${venue.address}, ${venue.city}, ${venue.state} ${venue.zip_code}`;
-  const coordinates = await geocodeAddress(fullAddress);
-
-  if (coordinates) {
-    const { error: updateError } = await supabase
-      .from('venues')
-      .update({
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude
-      })
-      .eq('id', venueId);
-
-    if (updateError) {
-      console.error('Error updating venue coordinates:', updateError);
-      return null;
-    }
-
-    return coordinates;
-  }
-
-  return null;
 };
