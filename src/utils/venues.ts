@@ -91,10 +91,33 @@ export const searchVenues = async (filters: {
     radiusMeters?: number;
   };
 }): Promise<Venue[]> => {
+  // Handle geospatial filtering first if needed
+  let venueIds: string[] | null = null;
+  if (filters.nearLocation) {
+    const { latitude, longitude, radiusMeters = 15000 } = filters.nearLocation;
+    const { data: geoData, error: geoError } = await supabase.rpc('venues_within_distance', {
+      lat: latitude,
+      lon: longitude,
+      distance_meters: radiusMeters,
+    });
+    
+    if (geoError) throw geoError;
+    venueIds = geoData || [];
+  }
+
   let query = supabase
     .from('venues')
     .select('*')
     .eq('status', 'approved');
+
+  // Apply geospatial filter if we have venue IDs from the RPC call
+  if (venueIds !== null) {
+    if (venueIds.length === 0) {
+      // No venues found within the specified radius
+      return [];
+    }
+    query = query.in('id', venueIds);
+  }
 
   if (filters.searchTerm) {
     query = query.or(`name.ilike.%${filters.searchTerm}%,description.ilike.%${filters.searchTerm}%`);
@@ -114,16 +137,6 @@ export const searchVenues = async (filters: {
 
   if (filters.minCapacity) {
     query = query.gte('standing_capacity', filters.minCapacity);
-  }
-
-  // Add geospatial filtering if location coordinates are provided
-  if (filters.nearLocation) {
-    const { latitude, longitude, radiusMeters = 15000 } = filters.nearLocation;
-    query = query.rpc('venues_within_distance', {
-      lat: latitude,
-      lon: longitude,
-      distance_meters: radiusMeters,
-    });
   }
 
   const { data, error } = await query.order('rating', { ascending: false });
