@@ -18,6 +18,11 @@ const Venues: React.FC = () => {
   const [category, setCategory] = useState<VenueCategory | ''>(initialCategory || '');
   const [maxPrice, setMaxPrice] = useState(0);
   const [minCapacity, setMinCapacity] = useState(0);
+  const [nearLocation, setNearLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    radiusMeters?: number;
+  } | null>(null);
 
   React.useEffect(() => {
     const loadVenues = async () => {
@@ -28,6 +33,7 @@ const Venues: React.FC = () => {
           category: category || undefined,
           maxPrice: maxPrice || undefined,
           minCapacity: minCapacity || undefined,
+          nearLocation: nearLocation || undefined,
         });
         setVenues(venueData);
       } catch (error) {
@@ -38,7 +44,7 @@ const Venues: React.FC = () => {
     };
 
     loadVenues();
-  }, [searchTerm, locationFilter, category, maxPrice, minCapacity]);
+  }, [searchTerm, locationFilter, category, maxPrice, minCapacity, nearLocation]);
 
   const filteredVenues = venues;
 
@@ -65,6 +71,7 @@ const Venues: React.FC = () => {
           setMaxPrice={setMaxPrice}
           minCapacity={minCapacity}
           setMinCapacity={setMinCapacity}
+          onLocationSearch={(coordinates) => setNearLocation(coordinates)}
         />
 
         <div className="flex justify-between items-center mb-6">

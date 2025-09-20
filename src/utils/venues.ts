@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { Venue, VenueCategory } from '../types/venue';
 import type { Database } from '../lib/supabase';
+import { geocodeAddress } from './geocoding';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type VenueInsert = Database['public']['Tables']['venues']['Insert'];
@@ -16,6 +17,8 @@ const convertToVenue = (row: VenueRow): Venue => ({
     city: row.city,
     state: row.state,
     zipCode: row.zip_code,
+    latitude: row.latitude || undefined,
+    longitude: row.longitude || undefined,
   },
   capacity: {
     seated: row.seated_capacity,
@@ -81,6 +84,11 @@ export const searchVenues = async (filters: {
   category?: VenueCategory;
   maxPrice?: number;
   minCapacity?: number;
+  nearLocation?: {
+    latitude: number;
+    longitude: number;
+    radiusMeters?: number;
+  };
 }): Promise<Venue[]> => {
   let query = supabase
     .from('venues')
@@ -105,6 +113,16 @@ export const searchVenues = async (filters: {
 
   if (filters.minCapacity) {
     query = query.gte('standing_capacity', filters.minCapacity);
+  }
+
+  // Add geospatial filtering if location coordinates are provided
+  if (filters.nearLocation) {
+    const { latitude, longitude, radiusMeters = 15000 } = filters.nearLocation;
+    query = query.rpc('venues_within_distance', {
+      lat: latitude,
+      lon: longitude,
+      distance_meters: radiusMeters,
+    });
   }
 
   const { data, error } = await query.order('rating', { ascending: false });
@@ -132,6 +150,10 @@ export const createVenue = async (venueData: {
   
   if (!user) throw new Error('Must be logged in to create venue');
 
+  // Geocode the address to get coordinates
+  const fullAddress = `${venueData.address}, ${venueData.city}, ${venueData.state} ${venueData.zipCode}`;
+  const coordinates = await geocodeAddress(fullAddress);
+
   const venueInsert: VenueInsert = {
     name: venueData.name,
     description: venueData.description,
@@ -148,6 +170,8 @@ export const createVenue = async (venueData: {
     images: venueData.images,
     owner_id: user.id,
     status: 'approved', // Auto-approve venues for now
+    latitude: coordinates?.latitude || null,
+    longitude: coordinates?.longitude || null,
   };
 
   const { data, error } = await supabase

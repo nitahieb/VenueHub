@@ -1,6 +1,7 @@
 import React from 'react';
-import { Search, MapPin, Users, DollarSign, Filter } from 'lucide-react';
+import { Search, MapPin, Users, DollarSign, Filter, Navigation } from 'lucide-react';
 import { VenueCategory } from '../types/venue';
+import { geocodeAddress } from '../utils/geocoding';
 
 interface SearchFiltersProps {
   searchTerm: string;
@@ -13,6 +14,7 @@ interface SearchFiltersProps {
   setMaxPrice: (price: number) => void;
   minCapacity: number;
   setMinCapacity: (capacity: number) => void;
+  onLocationSearch?: (coordinates: { latitude: number; longitude: number } | null) => void;
 }
 
 const categories: { value: VenueCategory | ''; label: string }[] = [
@@ -38,7 +40,29 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
   setMaxPrice,
   minCapacity,
   setMinCapacity,
+  onLocationSearch,
 }) => {
+  const [isGeocodingLocation, setIsGeocodingLocation] = React.useState(false);
+
+  const handleLocationChange = async (newLocation: string) => {
+    setLocation(newLocation);
+    
+    if (onLocationSearch && newLocation.trim()) {
+      setIsGeocodingLocation(true);
+      try {
+        const coordinates = await geocodeAddress(newLocation);
+        onLocationSearch(coordinates);
+      } catch (error) {
+        console.error('Error geocoding location:', error);
+        onLocationSearch(null);
+      } finally {
+        setIsGeocodingLocation(false);
+      }
+    } else if (onLocationSearch) {
+      onLocationSearch(null);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -54,12 +78,18 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
         </div>
 
         <div className="relative">
-          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          {isGeocodingLocation ? (
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          )}
           <input
             type="text"
-            placeholder="Location"
+            placeholder="Location (for nearby search)"
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            onChange={(e) => handleLocationChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
           />
         </div>
