@@ -130,7 +130,7 @@ export const searchVenues = async (filters: {
   }
 
   if (filters.location) {
-    query = query.or(`city.ilike.%${filters.location}%,state.ilike.%${filters.location}%`);
+    query = query.or(`city.ilike.%${filters.location}%,state.ilike.%${filters.location}%,address.ilike.%${filters.location}%`);
   }
 
   if (filters.category) {
