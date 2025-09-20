@@ -29,12 +29,9 @@ const ChatBot: React.FC = () => {
     let venueRecommendations = [];
     
     try {
-      // Call Smythos venue finder API
-      console.log('Calling Smythos venue finder API with requirements:', userMessage);
+      console.log('Calling Smythos API with requirements:', userMessage);
       
-      const apiUrl = 'https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/api/find_venues';
-      
-      const apiResponse = await fetch(apiUrl, {
+      const apiResponse = await fetch('https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/api/find_venues', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,24 +42,17 @@ const ChatBot: React.FC = () => {
       });
 
       if (!apiResponse.ok) {
-        const errorData = await apiResponse.json().catch(() => ({}));
-        console.error('Smythos API error:', apiResponse.status, errorData);
         throw new Error(`Smythos API error: ${apiResponse.status}`);
       }
 
       const responseText = await apiResponse.text();
-      console.log('Smythos API response:', responseText);
 
-      // The API returns plain text response
       response = responseText || "I found some great venues for you!";
-      
-      // Note: The API returns text response only, no venue objects
-      // Venue recommendations would need to be parsed from the text or handled differently
       venueRecommendations = [];
       
     } catch (error) {
       console.error('Error calling Smythos API:', error);
-      response = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
+      response = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment or check your internet connection.";
       venueRecommendations = [];
     }
 
