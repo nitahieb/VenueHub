@@ -93,7 +93,7 @@ export const searchVenues = async (filters: {
 }): Promise<Venue[]> => {
   // Handle geospatial filtering first if needed
   let venueIds: string[] | null = null;
-  if (filters.nearLocation) {
+  if (filters.nearLocation && !filters.location) {
     const { latitude, longitude, radiusMeters = 15000 } = filters.nearLocation;
     const { data: geoData, error: geoError } = await supabase.rpc('venues_within_distance', {
       distance_meters: radiusMeters,
