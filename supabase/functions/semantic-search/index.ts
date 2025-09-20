@@ -11,6 +11,8 @@
  * 3. Perform similarity search using cosine distance
  * 4. Return ranked results with similarity scores
  * 5. Include both venue and review matches for comprehensive results
+ * 
+ * Updated: Environment variables configured in Supabase dashboard
  */
 
 interface SemanticSearchRequest {
