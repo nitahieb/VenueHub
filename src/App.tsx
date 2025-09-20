@@ -7,6 +7,7 @@ import VenueDetail from './pages/VenueDetail';
 import Chat from './pages/Chat';
 import ListVenue from './pages/ListVenue';
 import UserVenues from './pages/UserVenues';
+import Admin from './pages/Admin';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/list-venue" element={<ListVenue />} />
           <Route path="/my-venues" element={<UserVenues />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </div>
     </Router>
