@@ -119,6 +119,9 @@ const ListVenue: React.FC = () => {
         return;
       }
 
+      // Show geocoding progress
+      setError('Geocoding address... This may take a moment.');
+
       // Create venue in database
       await createVenue({
         name: formData.name,
@@ -538,7 +541,11 @@ const ListVenue: React.FC = () => {
           {/* Error Message */}
           {error && (
             <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-4 rounded-lg">
+              <div className={`flex items-center space-x-2 p-4 rounded-lg ${
+                error.includes('Geocoding') 
+                  ? 'text-blue-600 bg-blue-50' 
+                  : 'text-red-600 bg-red-50'
+              }`}>
                 <AlertCircle className="h-5 w-5" />
                 <span>{error}</span>
               </div>
