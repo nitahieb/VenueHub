@@ -32,9 +32,12 @@ const ChatBot: React.FC = () => {
       // Call Smythos API
       console.log('Calling Smythos API with message:', userMessage);
       
-      const smythosResponse = await fetch('https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/chat', {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smythos-hybrid-search`;
+      
+      const smythosResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
