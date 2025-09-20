@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { Venue, VenueCategory } from '../types/venue';
 import type { Database } from '../lib/supabase';
 import { geocodeAddress } from './geocoding';
+import { generateEmbedding } from './embeddings';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type VenueInsert = Database['public']['Tables']['venues']['Insert'];
@@ -131,6 +132,133 @@ export const searchVenues = async (filters: {
   return data.map(convertToVenue);
 };
 
+/**
+ * Generate embedding text for a venue (same logic as in embeddings.ts)
+ */
+const generateVenueEmbeddingText = (venue: {
+  name: string;
+  description: string;
+  category: string;
+  city: string;
+  state: string;
+  seated_capacity: number;
+  standing_capacity: number;
+  hourly_price: number;
+  daily_price: number;
+  amenities: string[];
+  rating?: number;
+  reviews_count?: number;
+  featured?: boolean;
+}): string => {
+  // Helper functions (simplified versions from embeddings.ts)
+  const getQualityKeywords = (rating: number = 0, reviewCount: number = 0): string => {
+    const keywords = [];
+    
+    if (rating >= 4.5) {
+      keywords.push('excellent', 'outstanding', 'exceptional', 'premium', 'top-rated', 'highly-rated');
+    } else if (rating >= 4.0) {
+      keywords.push('great', 'good', 'quality', 'well-rated', 'recommended');
+    } else if (rating >= 3.5) {
+      keywords.push('decent', 'nice', 'acceptable', 'satisfactory');
+    }
+    
+    if (reviewCount > 50) {
+      keywords.push('popular', 'well-established', 'proven', 'trusted');
+    } else if (reviewCount > 20) {
+      keywords.push('established', 'reliable');
+    }
+    
+    keywords.push('hospitality', 'service', 'accommodation', 'comfort', 'experience');
+    return keywords.join(' ');
+  };
+
+  const getVenueTypeKeywords = (category: string, name: string, description: string): string => {
+    const keywords = [];
+    const text = `${name} ${description}`.toLowerCase();
+    
+    if (text.includes('hotel') || text.includes('resort') || text.includes('inn') || 
+        text.includes('lodge') || text.includes('suite') || text.includes('room')) {
+      keywords.push('hotel', 'accommodation', 'lodging', 'hospitality', 'rooms', 'suites', 'resort', 'inn');
+    }
+    
+    if (text.includes('restaurant') || text.includes('dining') || text.includes('kitchen') || 
+        text.includes('catering') || text.includes('food')) {
+      keywords.push('restaurant', 'dining', 'culinary', 'food', 'cuisine', 'catering', 'kitchen');
+    }
+    
+    if (text.includes('hall') || text.includes('ballroom') || text.includes('center') || 
+        text.includes('space') || text.includes('venue')) {
+      keywords.push('event space', 'function hall', 'banquet', 'reception', 'gathering');
+    }
+    
+    if (text.includes('luxury') || text.includes('upscale') || text.includes('elegant') || 
+        text.includes('premium') || text.includes('exclusive')) {
+      keywords.push('luxury', 'upscale', 'elegant', 'premium', 'exclusive', 'high-end', 'sophisticated');
+    }
+    
+    return keywords.join(' ');
+  };
+
+  const getCategoryKeywords = (category: string): string => {
+    const keywords: Record<string, string> = {
+      wedding: 'wedding ceremony reception bridal romantic elegant beautiful matrimony nuptials celebration love',
+      corporate: 'business meeting conference professional office boardroom executive corporate retreat seminar',
+      party: 'celebration birthday anniversary fun festive entertainment social gathering festivity',
+      outdoor: 'nature garden park scenic natural fresh air landscape outdoor patio terrace',
+      historic: 'heritage vintage classic traditional architecture historical landmark character charm',
+      modern: 'contemporary sleek minimalist urban chic stylish cutting-edge innovative',
+      conference: 'meeting presentation seminar workshop training business convention symposium',
+      exhibition: 'display showcase gallery museum art culture expo trade show'
+    };
+    return keywords[category] || '';
+  };
+
+  const getCapacityKeywords = (seatedCapacity: number, standingCapacity: number): string => {
+    const maxCapacity = Math.max(seatedCapacity, standingCapacity);
+    
+    if (maxCapacity > 500) return 'massive grand large-scale ballroom convention center huge enormous';
+    if (maxCapacity > 200) return 'large spacious grand ballroom big substantial sizeable';
+    if (maxCapacity > 100) return 'medium sized comfortable roomy moderate good-sized';
+    if (maxCapacity > 50) return 'intimate cozy small private boutique personal';
+    return 'tiny micro small intimate exclusive private';
+  };
+
+  const getPriceKeywords = (hourlyPriceInCents: number, dailyPriceInCents: number): string => {
+    const hourlyPrice = hourlyPriceInCents / 100;
+    const dailyPrice = dailyPriceInCents / 100;
+    const avgPrice = (hourlyPrice + dailyPrice / 8) / 2;
+    
+    if (avgPrice > 2000) return 'luxury premium upscale exclusive high-end elite prestigious';
+    if (avgPrice > 1000) return 'upscale quality refined elegant premium nice';
+    if (avgPrice > 500) return 'mid-range quality good nice comfortable decent';
+    if (avgPrice > 200) return 'affordable budget-friendly value economical reasonable';
+    return 'budget cheap economical low-cost value bargain';
+  };
+
+  const getFeaturedKeywords = (featured: boolean): string => {
+    if (featured) {
+      return 'featured premium top-choice recommended highlight showcase';
+    }
+    return '';
+  };
+
+  // Generate comprehensive embedding text
+  return [
+    venue.name,
+    venue.description,
+    venue.category,
+    venue.city,
+    venue.state,
+    getQualityKeywords(venue.rating || 0, venue.reviews_count || 0),
+    getVenueTypeKeywords(venue.category, venue.name, venue.description),
+    getCategoryKeywords(venue.category),
+    getCapacityKeywords(venue.seated_capacity, venue.standing_capacity),
+    getPriceKeywords(venue.hourly_price, venue.daily_price),
+    getFeaturedKeywords(venue.featured || false),
+    venue.amenities?.join(' ') || ''
+  ].filter(Boolean).join(' ');
+};
+
 export const createVenue = async (venueData: {
   name: string;
   description: string;
@@ -181,6 +309,54 @@ export const createVenue = async (venueData: {
     .single();
 
   if (error) throw error;
+
+  // Generate embedding for the new venue
+  try {
+    console.log('Generating embedding for new venue:', data.name);
+    
+    const embeddingText = generateVenueEmbeddingText({
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      city: data.city,
+      state: data.state,
+      seated_capacity: data.seated_capacity,
+      standing_capacity: data.standing_capacity,
+      hourly_price: data.hourly_price,
+      daily_price: data.daily_price,
+      amenities: data.amenities || [],
+      rating: data.rating,
+      reviews_count: data.reviews_count,
+      featured: data.featured,
+    });
+
+    const embedding = await generateEmbedding(embeddingText, 'document');
+
+    if (embedding) {
+      // Update the venue with the embedding
+      const { error: updateError } = await supabase
+        .from('venues')
+        .update({
+          embedding: `[${embedding.join(',')}]`,
+          embedding_text: embeddingText,
+          embedding_updated_at: new Date().toISOString()
+        })
+        .eq('id', data.id);
+
+      if (updateError) {
+        console.error('Error updating venue with embedding:', updateError);
+        // Don't throw error - venue creation was successful, embedding is just a bonus
+      } else {
+        console.log('Successfully generated embedding for new venue:', data.name);
+      }
+    } else {
+      console.warn('Could not generate embedding for new venue:', data.name);
+    }
+  } catch (embeddingError) {
+    console.error('Error during embedding generation for new venue:', embeddingError);
+    // Don't throw error - venue creation was successful, embedding generation failed
+  }
+
   return convertToVenue(data);
 };
 

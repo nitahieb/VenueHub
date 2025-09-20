@@ -24,7 +24,7 @@ interface SemanticSearchResult {
 /**
  * Generate embeddings using VoyageAI API
  */
-const generateEmbedding = async (text: string, inputType: 'document' | 'query' = 'document'): Promise<number[] | null> => {
+export const generateEmbedding = async (text: string, inputType: 'document' | 'query' = 'document'): Promise<number[] | null> => {
   const apiKey = import.meta.env.VITE_VOYAGEAI_API_KEY;
   
   if (!apiKey) {
