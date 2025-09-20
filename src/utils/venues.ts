@@ -96,9 +96,9 @@ export const searchVenues = async (filters: {
   if (filters.nearLocation) {
     const { latitude, longitude, radiusMeters = 15000 } = filters.nearLocation;
     const { data: geoData, error: geoError } = await supabase.rpc('venues_within_distance', {
+      distance_meters: radiusMeters,
       lat: latitude,
       lon: longitude,
-      distance_meters: radiusMeters,
     });
     
     if (geoError) throw geoError;
