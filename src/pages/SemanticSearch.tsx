@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Search, Sparkles, Zap, Brain, Target } from 'lucide-react';
-import { searchVenuesSemantic, generateVenueEmbeddings, generateReviewEmbeddings } from '../utils/embeddings';
+import { 
+  searchVenuesSemantic, 
+  searchVenuesSemanticWithDetails,
+  generateVenueEmbeddings, 
+  generateReviewEmbeddings 
+} from '../utils/embeddings';
 import VenueCard from '../components/VenueCard';
-import { getVenueById } from '../utils/venues';
 import { Venue } from '../types/venue';
 
 interface SemanticResult {
@@ -21,6 +25,7 @@ const SemanticSearch: React.FC = () => {
   const [results, setResults] = useState<SemanticResult[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchTime, setSearchTime] = useState<number>(0);
   const [generatingEmbeddings, setGeneratingEmbeddings] = useState(false);
   const [embeddingProgress, setEmbeddingProgress] = useState<string>('');
 
@@ -29,18 +34,49 @@ const SemanticSearch: React.FC = () => {
     
     setLoading(true);
     try {
-      const searchResults = await searchVenuesSemantic(query, 0.6, 12);
+      const startTime = Date.now();
+      
+      // Get search results with similarity scores
+      const searchResults = await searchVenuesSemantic(query, 0.6, 12, true);
       setResults(searchResults);
       
-      // Fetch full venue details
-      const venueDetails = await Promise.all(
-        searchResults.map(async (result) => {
-          const venue = await getVenueById(result.venue_id);
-          return venue;
-        })
-      );
+      // Get full venue details using the enhanced search
+      const venueDetails = await searchVenuesSemanticWithDetails(query, 0.6, 12);
       
-      setVenues(venueDetails.filter(Boolean) as Venue[]);
+      // Transform venue details to match Venue interface
+      const transformedVenues: Venue[] = venueDetails.map(venue => ({
+        id: venue.id,
+        name: venue.name,
+        description: venue.description,
+        location: {
+          address: venue.address,
+          city: venue.city,
+          state: venue.state,
+          zipCode: venue.zip_code,
+          latitude: venue.latitude,
+          longitude: venue.longitude,
+        },
+        capacity: {
+          seated: venue.seated_capacity,
+          standing: venue.standing_capacity,
+        },
+        price: {
+          hourly: venue.hourly_price / 100,
+          daily: venue.daily_price / 100,
+        },
+        amenities: venue.amenities || [],
+        images: venue.images || [],
+        category: venue.category,
+        rating: venue.rating,
+        reviews: venue.reviews_count,
+        availability: venue.availability,
+        featured: venue.featured,
+        status: venue.status,
+        owner_id: venue.owner_id,
+      }));
+      
+      setVenues(transformedVenues);
+      setSearchTime(Date.now() - startTime);
     } catch (error) {
       console.error('Search error:', error);
     } finally {
@@ -187,8 +223,11 @@ const SemanticSearch: React.FC = () => {
               <h2 className="text-2xl font-bold text-gray-900">
                 Search Results ({results.length})
               </h2>
-              <div className="text-sm text-gray-600">
-                Powered by AI semantic understanding
+              <div className="text-sm text-gray-600 space-y-1">
+                <div>Powered by AI semantic understanding</div>
+                {searchTime > 0 && (
+                  <div>Search completed in {searchTime}ms</div>
+                )}
               </div>
             </div>
 
@@ -210,7 +249,7 @@ const SemanticSearch: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium mb-2">
-                        {Math.round(result.max_similarity * 100)}% match
+                        {Math.round((result.max_similarity || 0) * 100)}% match
                       </div>
                       {result.review_matches > 0 && (
                         <div className="text-xs text-gray-500">
@@ -242,7 +281,7 @@ const SemanticSearch: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Understanding</h3>
               <p className="text-gray-600">
-                Our AI understands the meaning and context of your search, not just keywords.
+                VoyageAI understands the meaning and context of your search, not just keywords.
               </p>
             </div>
             <div className="text-center">
@@ -251,7 +290,7 @@ const SemanticSearch: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Smart Matching</h3>
               <p className="text-gray-600">
-                Finds venues that match your intent, even if they don't contain your exact words.
+                Vector similarity search finds venues that match your intent, even without exact keywords.
               </p>
             </div>
             <div className="text-center">
@@ -260,7 +299,7 @@ const SemanticSearch: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Relevant Results</h3>
               <p className="text-gray-600">
-                Results are ranked by semantic similarity and relevance to your needs.
+                Results ranked by cosine similarity scores and enhanced with review sentiment analysis.
               </p>
             </div>
           </div>

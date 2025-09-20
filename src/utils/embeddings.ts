@@ -256,29 +256,99 @@ export const generateReviewEmbeddings = async (): Promise<{
 export const searchVenuesSemantic = async (
   query: string,
   matchThreshold: number = 0.7,
-  matchCount: number = 10
+  matchCount: number = 10,
+  includeReviews: boolean = true
 ): Promise<SemanticSearchResult[]> => {
-  const { supabase } = await import('../lib/supabase');
+  // Use the new semantic search edge function instead of direct database calls
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   
-  const queryEmbedding = await generateQueryEmbedding(query);
-  
-  if (!queryEmbedding) {
-    console.warn('Could not generate query embedding, falling back to regular search');
+  if (!supabaseUrl) {
+    console.error('Supabase URL not configured');
     return [];
   }
+  
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/semantic-search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        match_threshold: matchThreshold,
+        match_count: matchCount,
+        include_reviews: includeReviews,
+      }),
+    });
 
-  const { data, error } = await supabase.rpc('search_venues_hybrid', {
-    query_embedding: `[${queryEmbedding.join(',')}]`,
-    match_threshold: matchThreshold,
-    match_count: matchCount
-  });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Semantic search API error:', response.status, errorData);
+      return [];
+    }
 
-  if (error) {
+    const data = await response.json();
+    
+    // Transform the response to match the expected format
+    return data.results.map((result: any) => ({
+      venue_id: result.venue_id,
+      venue_name: result.venue_name,
+      venue_description: result.venue_description,
+      city: result.city,
+      state: result.state,
+      category: result.category,
+      max_similarity: result.similarity_score,
+      review_matches: result.review_matches,
+    }));
+    
+  } catch (error) {
     console.error('Error performing semantic search:', error);
     return [];
   }
+};
 
-  return data || [];
+/**
+ * Perform semantic search and return full venue objects
+ */
+export const searchVenuesSemanticWithDetails = async (
+  query: string,
+  matchThreshold: number = 0.7,
+  matchCount: number = 10
+): Promise<any[]> => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  
+  if (!supabaseUrl) {
+    console.error('Supabase URL not configured');
+    return [];
+  }
+  
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/semantic-search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        match_threshold: matchThreshold,
+        match_count: matchCount,
+        include_reviews: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Semantic search API error:', response.status, errorData);
+      return [];
+    }
+
+    const data = await response.json();
+    return data.results.filter((result: any) => result.venue_details).map((result: any) => result.venue_details);
+    
+  } catch (error) {
+    console.error('Error performing semantic search with details:', error);
+    return [];
+  }
 };
 
 // Helper functions for generating contextual keywords
