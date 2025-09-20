@@ -259,12 +259,24 @@ export const searchVenuesSemantic = async (
   matchCount: number = 10,
   includeReviews: boolean = true
 ): Promise<SemanticSearchResult[]> => {
-  // Use the new semantic search edge function instead of direct database calls
+  const { supabase } = await import('../lib/supabase');
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   
-  if (!supabaseUrl) {
-    console.error('Supabase URL not configured');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Supabase configuration not found');
     return [];
+  }
+  
+  // Get authentication token
+  let authToken = supabaseAnonKey;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      authToken = session.access_token;
+    }
+  } catch (error) {
+    console.warn('Could not get user session, using anon key:', error);
   }
   
   try {
@@ -272,6 +284,7 @@ export const searchVenuesSemantic = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         query,
@@ -315,11 +328,24 @@ export const searchVenuesSemanticWithDetails = async (
   matchThreshold: number = 0.7,
   matchCount: number = 10
 ): Promise<any[]> => {
+  const { supabase } = await import('../lib/supabase');
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   
-  if (!supabaseUrl) {
-    console.error('Supabase URL not configured');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Supabase configuration not found');
     return [];
+  }
+  
+  // Get authentication token
+  let authToken = supabaseAnonKey;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      authToken = session.access_token;
+    }
+  } catch (error) {
+    console.warn('Could not get user session, using anon key:', error);
   }
   
   try {
@@ -327,6 +353,7 @@ export const searchVenuesSemanticWithDetails = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         query,

@@ -59,7 +59,7 @@ const corsHeaders = {
  * Optimized for search queries with input_type: 'query'
  */
 async function generateQueryEmbedding(query: string): Promise<number[] | null> {
-  const apiKey = Deno.env.get("VITE_VOYAGEAI_API_KEY");
+  const apiKey = Deno.env.get("VOYAGEAI_API_KEY");
   
   if (!apiKey) {
     console.warn("VoyageAI API key not found");
