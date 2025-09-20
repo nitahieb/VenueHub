@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { searchVenues } from '../utils/venues';
 import { VenueCategory } from '../types/venue';
 import { Venue } from '../types/venue';
@@ -6,11 +7,15 @@ import VenueCard from '../components/VenueCard';
 import SearchFilters from '../components/SearchFilters';
 
 const Venues: React.FC = () => {
+  const locationHook = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialCategory = searchParams.get('category') as VenueCategory | null;
+  
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [location, setLocation] = useState('');
-  const [category, setCategory] = useState<VenueCategory | ''>('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [category, setCategory] = useState<VenueCategory | ''>(initialCategory || '');
   const [maxPrice, setMaxPrice] = useState(0);
   const [minCapacity, setMinCapacity] = useState(0);
 
@@ -19,7 +24,7 @@ const Venues: React.FC = () => {
       try {
         const venueData = await searchVenues({
           searchTerm: searchTerm || undefined,
-          location: location || undefined,
+          location: locationFilter || undefined,
           category: category || undefined,
           maxPrice: maxPrice || undefined,
           minCapacity: minCapacity || undefined,
@@ -33,7 +38,7 @@ const Venues: React.FC = () => {
     };
 
     loadVenues();
-  }, [searchTerm, location, category, maxPrice, minCapacity]);
+  }, [searchTerm, locationFilter, category, maxPrice, minCapacity]);
 
   const filteredVenues = venues;
 
@@ -52,8 +57,8 @@ const Venues: React.FC = () => {
         <SearchFilters
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
-          location={location}
-          setLocation={setLocation}
+          location={locationFilter}
+          setLocation={setLocationFilter}
           category={category}
           setCategory={setCategory}
           maxPrice={maxPrice}

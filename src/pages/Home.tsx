@@ -164,14 +164,14 @@ const Home: React.FC = () => {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { name: 'Weddings', image: 'https://images.pexels.com/photos/1395967/pexels-photo-1395967.jpeg', count: 45 },
-              { name: 'Corporate', image: 'https://images.pexels.com/photos/1181406/pexels-photo-1181406.jpeg', count: 32 },
-              { name: 'Parties', image: 'https://images.pexels.com/photos/2310904/pexels-photo-2310904.jpeg', count: 28 },
-              { name: 'Outdoor', image: 'https://images.pexels.com/photos/1666065/pexels-photo-1666065.jpeg', count: 19 }
+              { name: 'Weddings', category: 'wedding', image: 'https://images.pexels.com/photos/1395967/pexels-photo-1395967.jpeg' },
+              { name: 'Corporate', category: 'corporate', image: 'https://images.pexels.com/photos/1181406/pexels-photo-1181406.jpeg' },
+              { name: 'Parties', category: 'party', image: 'https://images.pexels.com/photos/2310904/pexels-photo-2310904.jpeg' },
+              { name: 'Outdoor', category: 'outdoor', image: 'https://images.pexels.com/photos/1666065/pexels-photo-1666065.jpeg' }
             ].map((category) => (
               <Link
                 key={category.name}
-                to="/venues"
+                to={`/venues?category=${category.category}`}
                 className="group relative rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <img
@@ -182,7 +182,7 @@ const Home: React.FC = () => {
                 <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300"></div>
                 <div className="absolute inset-0 flex flex-col justify-center items-center text-white">
                   <h3 className="text-lg font-semibold mb-1">{category.name}</h3>
-                  <p className="text-sm opacity-90">{category.count} venues</p>
+                  <p className="text-sm opacity-90">Browse venues</p>
                 </div>
               </Link>
             ))}
