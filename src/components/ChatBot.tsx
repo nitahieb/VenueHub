@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { ChatMessage } from '../types/venue';
-import { getAllVenues } from '../data/venues';
+import { getVenuesByIds } from '../utils/venues';
 import VenueCard from './VenueCard';
 
 const ChatBot: React.FC = () => {
@@ -28,41 +28,47 @@ const ChatBot: React.FC = () => {
   const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
     const message = userMessage.toLowerCase();
     let response = '';
-    let recommendations = [];
+    let venueRecommendations = [];
     
     try {
-      let venues = [];
+      // Simulate Smythos's conversational response and venue ID selection
+      let selectedVenueIds: string[] = [];
 
-      // Simple keyword matching for demo purposes
+      // Simulate Smythos's response based on user input
       if (message.includes('wedding') || message.includes('bride') || message.includes('reception')) {
         response = "Perfect! I found some beautiful wedding venues for you. Here are my top recommendations based on your needs:";
-        venues = await searchVenues({ category: 'wedding' });
+        // Simulate Smythos selecting specific venue IDs (in real app, these would come from Smythos)
+        selectedVenueIds = await getSimulatedVenueIds('wedding');
       } else if (message.includes('corporate') || message.includes('business') || message.includes('conference') || message.includes('meeting')) {
         response = "Great choice! Here are some excellent corporate venues that would be perfect for your business event:";
-        venues = await searchVenues({ category: 'corporate' });
+        selectedVenueIds = await getSimulatedVenueIds('corporate');
       } else if (message.includes('outdoor') || message.includes('garden') || message.includes('outside')) {
         response = "Wonderful! I have some amazing outdoor venues that would create a memorable atmosphere:";
-        venues = await searchVenues({ category: 'outdoor' });
+        selectedVenueIds = await getSimulatedVenueIds('outdoor');
       } else if (message.includes('party') || message.includes('birthday') || message.includes('celebration')) {
         response = "Sounds fun! Here are some fantastic party venues that will make your celebration unforgettable:";
-        venues = await searchVenues({ category: 'party' });
+        selectedVenueIds = await getSimulatedVenueIds('party');
       } else if (message.includes('budget') || message.includes('cheap') || message.includes('affordable')) {
         response = "I understand budget is important. Here are some great value venues that offer excellent quality at reasonable prices:";
-        venues = await searchVenues({ maxPrice: 500 });
+        selectedVenueIds = await getSimulatedVenueIds('budget');
       } else if (message.includes('large') || message.includes('big') || message.match(/\d{3,}/)) {
         const capacity = message.match(/\d+/)?.[0];
         response = `I found venues that can accommodate ${capacity || 'large'} guests. Here are some spacious options:`;
-        venues = await searchVenues({ minCapacity: parseInt(capacity || '200') });
+        selectedVenueIds = await getSimulatedVenueIds('large');
       } else {
         response = "Based on your requirements, here are some highly-rated venues I'd recommend. Each offers unique features that might be perfect for your event:";
-        venues = await searchVenues({});
+        selectedVenueIds = await getSimulatedVenueIds('general');
       }
 
-      recommendations = venues.slice(0, 3);
+      // Fetch full venue details using the IDs returned by Smythos
+      if (selectedVenueIds.length > 0) {
+        venueRecommendations = await getVenuesByIds(selectedVenueIds);
+      }
+      
     } catch (error) {
       console.error('Error searching venues:', error);
       response = "I'm sorry, I'm having trouble accessing venue data right now. Please try again in a moment.";
-      recommendations = [];
+      venueRecommendations = [];
     }
 
     return {
@@ -70,8 +76,45 @@ const ChatBot: React.FC = () => {
       type: 'bot',
       content: response,
       timestamp: new Date(),
-      venueRecommendations: recommendations.slice(0, 3), // Limit to 3 recommendations
+      venueRecommendations: venueRecommendations.slice(0, 3), // Limit to 3 recommendations
     };
+  };
+
+  // Simulate getting venue IDs from Smythos (in real app, this would be an API call to Smythos)
+  const getSimulatedVenueIds = async (category: string): Promise<string[]> => {
+    // In a real implementation, this would be a fetch call to your Smythos agent
+    // For now, we'll simulate by getting some venue IDs from the database
+    const { supabase } = await import('../lib/supabase');
+    
+    let query = supabase
+      .from('venues')
+      .select('id')
+      .eq('status', 'approved')
+      .limit(3);
+
+    // Apply category-based filtering for simulation
+    if (category === 'wedding') {
+      query = query.eq('category', 'wedding');
+    } else if (category === 'corporate') {
+      query = query.eq('category', 'corporate');
+    } else if (category === 'outdoor') {
+      query = query.eq('category', 'outdoor');
+    } else if (category === 'party') {
+      query = query.eq('category', 'party');
+    } else if (category === 'budget') {
+      query = query.lte('hourly_price', 50000); // $500 in cents
+    } else if (category === 'large') {
+      query = query.gte('standing_capacity', 200);
+    }
+    
+    const { data, error } = await query.order('rating', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching venue IDs:', error);
+      return [];
+    }
+    
+    return data?.map(venue => venue.id) || [];
   };
 
   const handleSendMessage = async () => {

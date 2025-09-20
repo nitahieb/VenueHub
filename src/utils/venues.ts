@@ -437,3 +437,19 @@ export const createReview = async (reviewData: {
   if (error) throw error;
   return data;
 };
+
+export const getVenuesByIds = async (venueIds: string[]): Promise<Venue[]> => {
+  if (venueIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('venues')
+    .select('*')
+    .in('id', venueIds)
+    .eq('status', 'approved');
+
+  if (error) throw error;
+  
+  // Maintain the order of the input IDs
+  const venueMap = new Map(data.map(venue => [venue.id, convertToVenue(venue)]));
+  return venueIds.map(id => venueMap.get(id)).filter(Boolean) as Venue[];
+};
