@@ -1,5 +1,20 @@
 // Semantic search utilities using VoyageAI embeddings
 
+// Cache for query embeddings to avoid redundant API calls
+const embeddingCache = new Map<string, { embedding: number[]; timestamp: number }>();
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const MAX_CACHE_SIZE = 100;
+
+// Rate limiting state
+let lastApiCall = 0;
+const MIN_API_INTERVAL = 20000; // 20 seconds between calls (3 RPM = 20s interval)
+let pendingRequests: Array<{
+  text: string;
+  resolve: (embedding: number[] | null) => void;
+  reject: (error: Error) => void;
+}> = [];
+let processingBatch = false;
+
 interface VoyageAIResponse {
   data: Array<{
     embedding: number[];
@@ -22,9 +37,116 @@ interface SemanticSearchResult {
 }
 
 /**
+ * Clean expired entries from cache
+ */
+const cleanCache = () => {
+  const now = Date.now();
+  for (const [key, value] of embeddingCache.entries()) {
+    if (now - value.timestamp > CACHE_DURATION) {
+      embeddingCache.delete(key);
+    }
+  }
+  
+  // If cache is too large, remove oldest entries
+  if (embeddingCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(embeddingCache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toRemove = entries.slice(0, embeddingCache.size - MAX_CACHE_SIZE);
+    toRemove.forEach(([key]) => embeddingCache.delete(key));
+  }
+};
+
+/**
+ * Get cached embedding or return null if not found/expired
+ */
+const getCachedEmbedding = (text: string): number[] | null => {
+  cleanCache();
+  const cached = embeddingCache.get(text);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    console.log('Using cached embedding for:', text.substring(0, 50) + '...');
+    return cached.embedding;
+  }
+  return null;
+};
+
+/**
+ * Cache an embedding
+ */
+const cacheEmbedding = (text: string, embedding: number[]) => {
+  embeddingCache.set(text, { embedding, timestamp: Date.now() });
+};
+
+/**
+ * Process pending embedding requests in batches with rate limiting
+ */
+const processPendingRequests = async () => {
+  if (processingBatch || pendingRequests.length === 0) return;
+  
+  processingBatch = true;
+  
+  while (pendingRequests.length > 0) {
+    const request = pendingRequests.shift()!;
+    
+    try {
+      // Check cache first
+      const cached = getCachedEmbedding(request.text);
+      if (cached) {
+        request.resolve(cached);
+        continue;
+      }
+      
+      // Rate limiting: ensure minimum interval between API calls
+      const now = Date.now();
+      const timeSinceLastCall = now - lastApiCall;
+      if (timeSinceLastCall < MIN_API_INTERVAL) {
+        const waitTime = MIN_API_INTERVAL - timeSinceLastCall;
+        console.log(`Rate limiting: waiting ${waitTime}ms before next VoyageAI call`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+      
+      // Make API call
+      const embedding = await generateEmbeddingDirect(request.text, 'query');
+      lastApiCall = Date.now();
+      
+      if (embedding) {
+        cacheEmbedding(request.text, embedding);
+        request.resolve(embedding);
+      } else {
+        request.reject(new Error('Failed to generate embedding'));
+      }
+      
+    } catch (error) {
+      request.reject(error instanceof Error ? error : new Error('Unknown error'));
+    }
+  }
+  
+  processingBatch = false;
+};
+
+/**
+ * Queue an embedding request with rate limiting and caching
+ */
+const queueEmbeddingRequest = (text: string): Promise<number[] | null> => {
+  return new Promise((resolve, reject) => {
+    // Check cache first
+    const cached = getCachedEmbedding(text);
+    if (cached) {
+      resolve(cached);
+      return;
+    }
+    
+    // Add to queue
+    pendingRequests.push({ text, resolve, reject });
+    
+    // Start processing if not already running
+    processPendingRequests();
+  });
+};
+
+/**
  * Generate embeddings using VoyageAI API
  */
-export const generateEmbedding = async (text: string): Promise<number[] | null> => {
+const generateEmbeddingDirect = async (text: string, inputType: 'document' | 'query' = 'document'): Promise<number[] | null> => {
   const apiKey = import.meta.env.VITE_VOYAGEAI_API_KEY;
   
   if (!apiKey) {
@@ -42,7 +164,7 @@ export const generateEmbedding = async (text: string): Promise<number[] | null> 
       body: JSON.stringify({
         input: [text],
         model: 'voyage-3-large', // 1024 dimensions, high quality
-        input_type: 'document', // For storing/indexing
+        input_type: inputType,
       }),
     });
 
@@ -59,40 +181,34 @@ export const generateEmbedding = async (text: string): Promise<number[] | null> 
 };
 
 /**
+ * Generate embeddings using VoyageAI API with caching and rate limiting
+ */
+export const generateEmbedding = async (text: string): Promise<number[] | null> => {
+  return queueEmbeddingRequest(text);
+};
+
+/**
  * Generate query embedding (optimized for search queries)
  */
 export const generateQueryEmbedding = async (query: string): Promise<number[] | null> => {
-  const apiKey = import.meta.env.VITE_VOYAGEAI_API_KEY;
-  
-  if (!apiKey) {
-    console.warn('VoyageAI API key not found. Semantic search will not be available.');
-    return null;
-  }
-
-  try {
-    const response = await fetch('https://api.voyageai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        input: [query],
-        model: 'voyage-3-large',
-        input_type: 'query', // Optimized for search queries
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`VoyageAI API error: ${response.status}`);
+  return new Promise((resolve, reject) => {
+    // Check cache first
+    const cached = getCachedEmbedding(query);
+    if (cached) {
+      resolve(cached);
+      return;
     }
-
-    const data: VoyageAIResponse = await response.json();
-    return data.data[0]?.embedding || null;
-  } catch (error) {
-    console.error('Error generating query embedding:', error);
-    return null;
-  }
+    
+    // Add to queue with query-specific input type
+    pendingRequests.push({ 
+      text: query, 
+      resolve, 
+      reject: (error: Error) => reject(error)
+    });
+    
+    // Start processing if not already running
+    processPendingRequests();
+  });
 };
 
 /**
