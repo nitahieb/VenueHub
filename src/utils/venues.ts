@@ -154,10 +154,6 @@ export const createVenue = async (venueData: {
   const fullAddress = `${venueData.address}, ${venueData.city}, ${venueData.state} ${venueData.zipCode}`;
   const coordinates = await geocodeAddress(fullAddress);
 
-  // Geocode the address to get coordinates
-  const fullAddress = `${venueData.address}, ${venueData.city}, ${venueData.state} ${venueData.zipCode}`;
-  const coordinates = await geocodeAddress(fullAddress);
-
   const venueInsert: VenueInsert = {
     name: venueData.name,
     description: venueData.description,
@@ -174,8 +170,6 @@ export const createVenue = async (venueData: {
     images: venueData.images,
     owner_id: user.id,
     status: 'approved', // Auto-approve venues for now
-    latitude: coordinates?.latitude || null,
-    longitude: coordinates?.longitude || null,
     latitude: coordinates?.latitude || null,
     longitude: coordinates?.longitude || null,
   };
