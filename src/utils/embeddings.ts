@@ -78,7 +78,7 @@ export const generateVenueEmbeddings = async (): Promise<{
   // Get venues without embeddings
   const { data: venues, error } = await supabase
     .from('venues')
-    .select('id, name, description, category, city, state, seated_capacity, hourly_price, amenities')
+    .select('id, name, description, category, city, state, seated_capacity, standing_capacity, hourly_price, daily_price, amenities, rating, reviews_count, featured')
     .is('embedding', null)
     .eq('status', 'approved');
 
@@ -103,12 +103,18 @@ export const generateVenueEmbeddings = async (): Promise<{
         venue.category,
         venue.city,
         venue.state,
+        // Add quality and hospitality keywords
+        getQualityKeywords(venue.rating, venue.reviews_count),
+        // Add venue type keywords (including hotel-like terms)
+        getVenueTypeKeywords(venue.category, venue.name, venue.description),
         // Add category-specific keywords
         getCategoryKeywords(venue.category),
         // Add capacity-based keywords
-        getCapacityKeywords(venue.seated_capacity),
+        getCapacityKeywords(venue.seated_capacity, venue.standing_capacity),
         // Add price-based keywords
-        getPriceKeywords(venue.hourly_price),
+        getPriceKeywords(venue.hourly_price, venue.daily_price),
+        // Add feature keywords
+        getFeaturedKeywords(venue.featured),
         // Add amenities
         venue.amenities?.join(' ') || ''
       ].filter(Boolean).join(' ');
@@ -225,7 +231,7 @@ export const generateReviewEmbeddings = async (): Promise<{
  */
 export const searchVenuesSemantic = async (
   query: string,
-  matchThreshold: number = 0.7,
+  matchThreshold: number = 0.4,
   matchCount: number = 10,
   includeReviews: boolean = true
 ): Promise<SemanticSearchResult[]> => {
@@ -305,7 +311,7 @@ export const searchVenuesSemantic = async (
  */
 export const searchVenuesSemanticWithDetails = async (
   query: string,
-  matchThreshold: number = 0.7,
+  matchThreshold: number = 0.4,
   matchCount: number = 10
 ): Promise<any[]> => {
   const { supabase } = await import('../lib/supabase');
@@ -369,36 +375,109 @@ export const searchVenuesSemanticWithDetails = async (
 };
 
 // Helper functions for generating contextual keywords
+const getQualityKeywords = (rating: number, reviewCount: number): string => {
+  const keywords = [];
+  
+  // Rating-based quality keywords
+  if (rating >= 4.5) {
+    keywords.push('excellent', 'outstanding', 'exceptional', 'premium', 'top-rated', 'highly-rated');
+  } else if (rating >= 4.0) {
+    keywords.push('great', 'good', 'quality', 'well-rated', 'recommended');
+  } else if (rating >= 3.5) {
+    keywords.push('decent', 'nice', 'acceptable', 'satisfactory');
+  }
+  
+  // Review count-based credibility keywords
+  if (reviewCount > 50) {
+    keywords.push('popular', 'well-established', 'proven', 'trusted');
+  } else if (reviewCount > 20) {
+    keywords.push('established', 'reliable');
+  }
+  
+  // General hospitality keywords
+  keywords.push('hospitality', 'service', 'accommodation', 'comfort', 'experience');
+  
+  return keywords.join(' ');
+};
+
+const getVenueTypeKeywords = (category: string, name: string, description: string): string => {
+  const keywords = [];
+  const text = `${name} ${description}`.toLowerCase();
+  
+  // Hotel and accommodation keywords
+  if (text.includes('hotel') || text.includes('resort') || text.includes('inn') || 
+      text.includes('lodge') || text.includes('suite') || text.includes('room')) {
+    keywords.push('hotel', 'accommodation', 'lodging', 'hospitality', 'rooms', 'suites', 'resort', 'inn');
+  }
+  
+  // Restaurant and dining keywords
+  if (text.includes('restaurant') || text.includes('dining') || text.includes('kitchen') || 
+      text.includes('catering') || text.includes('food')) {
+    keywords.push('restaurant', 'dining', 'culinary', 'food', 'cuisine', 'catering', 'kitchen');
+  }
+  
+  // Event space keywords
+  if (text.includes('hall') || text.includes('ballroom') || text.includes('center') || 
+      text.includes('space') || text.includes('venue')) {
+    keywords.push('event space', 'function hall', 'banquet', 'reception', 'gathering');
+  }
+  
+  // Luxury keywords
+  if (text.includes('luxury') || text.includes('upscale') || text.includes('elegant') || 
+      text.includes('premium') || text.includes('exclusive')) {
+    keywords.push('luxury', 'upscale', 'elegant', 'premium', 'exclusive', 'high-end', 'sophisticated');
+  }
+  
+  return keywords.join(' ');
+};
+
+const getFeaturedKeywords = (featured: boolean): string => {
+  if (featured) {
+    return 'featured premium top-choice recommended highlight showcase';
+  }
+  return '';
+};
+
 const getCategoryKeywords = (category: string): string => {
   const keywords: Record<string, string> = {
-    wedding: 'wedding ceremony reception bridal romantic elegant beautiful',
-    corporate: 'business meeting conference professional office boardroom',
-    party: 'celebration birthday anniversary fun festive entertainment',
-    outdoor: 'nature garden park scenic natural fresh air landscape',
-    historic: 'heritage vintage classic traditional architecture historical',
-    modern: 'contemporary sleek minimalist urban chic stylish',
-    conference: 'meeting presentation seminar workshop training business',
-    exhibition: 'display showcase gallery museum art culture'
+    wedding: 'wedding ceremony reception bridal romantic elegant beautiful matrimony nuptials celebration love',
+    corporate: 'business meeting conference professional office boardroom executive corporate retreat seminar',
+    party: 'celebration birthday anniversary fun festive entertainment social gathering festivity',
+    outdoor: 'nature garden park scenic natural fresh air landscape outdoor patio terrace',
+    historic: 'heritage vintage classic traditional architecture historical landmark character charm',
+    modern: 'contemporary sleek minimalist urban chic stylish cutting-edge innovative',
+    conference: 'meeting presentation seminar workshop training business convention symposium',
+    exhibition: 'display showcase gallery museum art culture expo trade show'
   };
   return keywords[category] || '';
 };
 
-const getCapacityKeywords = (capacity: number): string => {
-  if (capacity > 200) return 'large spacious grand ballroom massive';
-  if (capacity > 100) return 'medium sized comfortable roomy';
-  return 'intimate cozy small private boutique';
+const getCapacityKeywords = (seatedCapacity: number, standingCapacity: number): string => {
+  const maxCapacity = Math.max(seatedCapacity, standingCapacity);
+  
+  if (maxCapacity > 500) return 'massive grand large-scale ballroom convention center huge enormous';
+  if (maxCapacity > 200) return 'large spacious grand ballroom big substantial sizeable';
+  if (maxCapacity > 100) return 'medium sized comfortable roomy moderate good-sized';
+  if (maxCapacity > 50) return 'intimate cozy small private boutique personal';
+  return 'tiny micro small intimate exclusive private';
 };
 
-const getPriceKeywords = (priceInCents: number): string => {
-  const pricePerHour = priceInCents / 100;
-  if (pricePerHour > 1000) return 'luxury premium upscale exclusive high-end';
-  if (pricePerHour > 500) return 'upscale quality refined elegant';
-  return 'affordable budget-friendly value economical';
+const getPriceKeywords = (hourlyPriceInCents: number, dailyPriceInCents: number): string => {
+  const hourlyPrice = hourlyPriceInCents / 100;
+  const dailyPrice = dailyPriceInCents / 100;
+  const avgPrice = (hourlyPrice + dailyPrice / 8) / 2; // Rough average
+  
+  if (avgPrice > 2000) return 'luxury premium upscale exclusive high-end elite prestigious';
+  if (avgPrice > 1000) return 'upscale quality refined elegant premium nice';
+  if (avgPrice > 500) return 'mid-range quality good nice comfortable decent';
+  if (avgPrice > 200) return 'affordable budget-friendly value economical reasonable';
+  return 'budget cheap economical low-cost value bargain';
 };
 
 const getRatingKeywords = (rating: number): string => {
-  if (rating >= 5) return 'excellent outstanding perfect amazing exceptional';
-  if (rating >= 4) return 'great good quality recommended solid';
-  if (rating >= 3) return 'decent okay average acceptable';
-  return 'poor disappointing issues problems';
+  if (rating >= 5) return 'excellent outstanding perfect amazing exceptional flawless superb';
+  if (rating >= 4) return 'great good quality recommended solid nice wonderful';
+  if (rating >= 3) return 'decent okay average acceptable satisfactory fair';
+  if (rating >= 2) return 'below average disappointing issues problems concerns';
+  return 'poor terrible awful disappointing major issues problems';
 };

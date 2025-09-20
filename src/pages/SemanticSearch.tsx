@@ -32,22 +32,20 @@ const SemanticSearch: React.FC = () => {
   const handleSearch = async () => {
     if (!query.trim()) return;
     
-    // Show user-friendly message about rate limiting
-    if (query !== results.length > 0 ? results[0]?.venue_name : '') {
-      setResults([]);
-      setVenues([]);
-    }
+    // Clear previous results
+    setResults([]);
+    setVenues([]);
     
     setLoading(true);
     try {
       const startTime = Date.now();
       
       // Get search results with similarity scores
-      const searchResults = await searchVenuesSemantic(query, 0.6, 12, true);
+      const searchResults = await searchVenuesSemantic(query, 0.4, 15, true);
       setResults(searchResults);
       
       // Get full venue details using the enhanced search
-      const venueDetails = await searchVenuesSemanticWithDetails(query, 0.6, 12);
+      const venueDetails = await searchVenuesSemanticWithDetails(query, 0.4, 15);
       
       // Transform venue details to match Venue interface
       const transformedVenues: Venue[] = venueDetails.map(venue => ({
@@ -113,14 +111,18 @@ const SemanticSearch: React.FC = () => {
   };
 
   const exampleQueries = [
+    "nice hotel with great service",
     "romantic lakeside wedding venue",
+    "luxury ballroom for gala",
     "corporate retreat in the mountains",
     "family-friendly outdoor celebration",
     "intimate dinner party space",
     "historic venue with character",
     "modern tech conference center",
     "garden wedding with natural beauty",
-    "luxury ballroom for gala"
+    "affordable venue with good reviews",
+    "upscale restaurant for private dining",
+    "cozy space for small gatherings"
   ];
 
   return (
@@ -287,7 +289,7 @@ const SemanticSearch: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Understanding</h3>
               <p className="text-gray-600">
-                VoyageAI understands the meaning and context of your search, not just keywords.
+                VoyageAI understands the meaning and context of your search, analyzing both venue descriptions and user reviews.
               </p>
             </div>
             <div className="text-center">
@@ -296,7 +298,7 @@ const SemanticSearch: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Smart Matching</h3>
               <p className="text-gray-600">
-                Vector similarity search finds venues that match your intent, even without exact keywords.
+                Hybrid search combines venue and review embeddings to find the best matches for your specific needs.
               </p>
             </div>
             <div className="text-center">
@@ -305,7 +307,7 @@ const SemanticSearch: React.FC = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Relevant Results</h3>
               <p className="text-gray-600">
-                Results ranked by cosine similarity scores and enhanced with review sentiment analysis.
+                Results ranked by weighted similarity scores combining venue features with user experiences from reviews.
               </p>
             </div>
           </div>

@@ -56,15 +56,29 @@ async function performSemanticSearch(
   matchThreshold: number,
   matchCount: number
 ) {
-  const { data, error } = await supabase.rpc("search_venues_hybrid", {
+  // First try the hybrid search function
+  let { data, error } = await supabase.rpc("search_venues_hybrid", {
     query_embedding: `[${queryEmbedding.join(",")}]`,
     match_threshold: matchThreshold,
     match_count: matchCount,
   });
 
-  if (error) {
-    console.error("Database search error:", error);
-    throw new Error(`Database search failed: ${error.message}`);
+  // If hybrid search fails, fall back to venue-only search
+  if (error || !data) {
+    console.warn("Hybrid search failed, falling back to venue-only search:", error);
+    
+    const { data: venueData, error: venueError } = await supabase.rpc("search_venues_only", {
+      query_embedding: `[${queryEmbedding.join(",")}]`,
+      match_threshold: matchThreshold,
+      match_count: matchCount,
+    });
+    
+    if (venueError) {
+      console.error("Venue-only search also failed:", venueError);
+      throw new Error(`Database search failed: ${venueError.message}`);
+    }
+    
+    data = venueData;
   }
 
   return data || [];
