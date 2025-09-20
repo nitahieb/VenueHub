@@ -138,7 +138,7 @@ export const searchVenues = async (filters: {
   }
 
   if (filters.maxPrice) {
-    query = query.lte('hourly_price', filters.maxPrice);
+    query = query.lte('hourly_price', filters.maxPrice * 100); // Convert dollars to cents
   }
 
   if (filters.minCapacity) {
