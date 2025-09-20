@@ -4,7 +4,11 @@ import { geocodeAddress } from './geocoding';
 /**
  * Geocode all existing venues that don't have coordinates
  */
-export const geocodeExistingVenues = async () => {
+export const geocodeExistingVenues = async (): Promise<{
+  success: number;
+  errors: number;
+  total: number;
+}> => {
   console.log('Starting to geocode existing venues...');
   
   // Get all venues without coordinates
@@ -15,12 +19,12 @@ export const geocodeExistingVenues = async () => {
 
   if (error) {
     console.error('Error fetching venues:', error);
-    return;
+    throw error;
   }
 
   if (!venues || venues.length === 0) {
     console.log('No venues need geocoding');
-    return;
+    return { success: 0, errors: 0, total: 0 };
   }
 
   console.log(`Found ${venues.length} venues to geocode`);
@@ -69,6 +73,12 @@ export const geocodeExistingVenues = async () => {
   console.log(`\n🎉 Geocoding complete!`);
   console.log(`✅ Successfully geocoded: ${successCount} venues`);
   console.log(`❌ Failed to geocode: ${errorCount} venues`);
+  
+  return {
+    success: successCount,
+    errors: errorCount,
+    total: venues.length
+  };
 };
 
 /**

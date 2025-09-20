@@ -15,55 +15,12 @@ const Admin: React.FC = () => {
     setGeocodingResults(null);
     
     try {
-      // Capture console logs to show results
-      const originalLog = console.log;
-      const originalError = console.error;
-      const originalWarn = console.warn;
-      
-      let successCount = 0;
-      let errorCount = 0;
-      let totalCount = 0;
-      
-      console.log = (...args) => {
-        originalLog(...args);
-        const message = args.join(' ');
-        if (message.includes('Found') && message.includes('venues to geocode')) {
-          const match = message.match(/Found (\d+) venues/);
-          if (match) totalCount = parseInt(match[1]);
-        }
-        if (message.includes('✅ Successfully geocoded:')) {
-          successCount++;
-        }
-      };
-      
-      console.error = (...args) => {
-        originalError(...args);
-        errorCount++;
-      };
-      
-      console.warn = (...args) => {
-        originalWarn(...args);
-        const message = args.join(' ');
-        if (message.includes('❌ Could not geocode:')) {
-          errorCount++;
-        }
-      };
-      
-      await geocodeExistingVenues();
-      
-      // Restore original console methods
-      console.log = originalLog;
-      console.error = originalError;
-      console.warn = originalWarn;
-      
-      setGeocodingResults({
-        success: successCount,
-        errors: errorCount,
-        total: totalCount
-      });
+      const results = await geocodeExistingVenues();
+      setGeocodingResults(results);
       
     } catch (error) {
       console.error('Error during geocoding:', error);
+      alert('Error during geocoding. Please check the console for details.');
     } finally {
       setIsGeocoding(false);
     }
