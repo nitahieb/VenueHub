@@ -176,7 +176,6 @@ function transformVenueForSmythos(venueDetails: any, similarityScore: number) {
       daily: venueDetails.daily_price / 100,
     },
     amenities: venueDetails.amenities || [],
-    images: venueDetails.images || [],
     category: venueDetails.category,
     rating: venueDetails.rating,
     reviews: venueDetails.reviews_count,
