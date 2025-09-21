@@ -92,6 +92,7 @@ const ChatBot: React.FC = () => {
 
     // Bot message text
     response = responseData.result;
+    console.log(response)
 
     // If there are venue_ids, fetch their details from Supabase
     if (responseData.venue_ids && responseData.venue_ids.length > 0) {
