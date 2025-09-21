@@ -7,6 +7,10 @@
 
 interface SmythosChatRequest {
   requirements: string;
+    history: {
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+  }[]; 
 }
 
 interface SmythosApiResponse {
