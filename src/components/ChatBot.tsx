@@ -284,23 +284,29 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
   };
 
   return (
-    <div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center space-x-3">
-        <div className="relative">
-          <Bot className="h-8 w-8" />
-          <Sparkles className="h-4 w-4 absolute -top-1 -right-1 text-amber-300" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold">AI Venue Assistant</h2>
-          <p className="text-blue-100 text-sm">Find your perfect event space</p>
-        </div>
-          <button
-    onClick={handleClearHistory}
-    className="text-sm bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg transition"
-  >
-    Clear
-  </button>
+<div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
+  {/* Header */}
+  <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between">
+    {/* Left side (bot icon + title) */}
+    <div className="flex items-center space-x-3">
+      <div className="relative">
+        <Bot className="h-8 w-8" />
+        <Sparkles className="h-4 w-4 absolute -top-1 -right-1 text-amber-300" />
       </div>
+      <div>
+        <h2 className="text-lg font-semibold">AI Venue Assistant</h2>
+        <p className="text-blue-100 text-sm">Find your perfect event space</p>
+      </div>
+    </div>
+
+    {/* Right side (Clear button) */}
+    <button
+      onClick={handleClearHistory}
+      className="flex items-center space-x-1 text-sm bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg transition"
+    >
+      Clear
+    </button>
+  </div>
       
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
