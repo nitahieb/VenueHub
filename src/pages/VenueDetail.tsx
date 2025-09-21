@@ -17,17 +17,21 @@ import {
   Calendar,
   Phone,
   Mail,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
-import { getVenueById, getVenueReviews } from '../utils/venues';
+import { getVenueById, getVenueReviews, getSimilarVenues } from '../utils/venues';
 import { getCurrentUser } from '../utils/auth';
 import { Venue } from '../types/venue';
+import VenueCard from '../components/VenueCard';
 
 const VenueDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [venue, setVenue] = useState<Venue | null>(null);
   const [venueReviews, setVenueReviews] = useState<any[]>([]);
+  const [similarVenues, setSimilarVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSimilarVenues, setLoadingSimilarVenues] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
@@ -57,6 +61,16 @@ const VenueDetail: React.FC = () => {
         // Load venue reviews
         const reviewsData = await getVenueReviews(id);
         setVenueReviews(reviewsData);
+        
+        // Load similar venues
+        try {
+          const similar = await getSimilarVenues(id);
+          setSimilarVenues(similar);
+        } catch (error) {
+          console.error('Error loading similar venues:', error);
+        } finally {
+          setLoadingSimilarVenues(false);
+        }
       } catch (error) {
         console.error('Error loading venue:', error);
       } finally {
@@ -315,6 +329,47 @@ const VenueDetail: React.FC = () => {
                 </>
                 )}
               </div>
+            </div>
+
+            {/* Similar Venues Section */}
+            <div>
+              <div className="flex items-center mb-6">
+                <Sparkles className="h-6 w-6 text-purple-600 mr-3" />
+                <h2 className="text-2xl font-bold text-gray-900">Similar Venues You Might Like</h2>
+              </div>
+              
+              {loadingSimilarVenues ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="bg-white rounded-xl shadow-md h-96 animate-pulse">
+                      <div className="bg-gray-200 h-48 rounded-t-xl"></div>
+                      <div className="p-6 space-y-3">
+                        <div className="bg-gray-200 h-4 rounded w-3/4"></div>
+                        <div className="bg-gray-200 h-3 rounded w-1/2"></div>
+                        <div className="bg-gray-200 h-3 rounded w-full"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : similarVenues.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {similarVenues.map((similarVenue) => (
+                    <VenueCard key={similarVenue.id} venue={similarVenue} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-gray-400 mb-4">
+                    <Sparkles className="mx-auto h-12 w-12" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No similar venues found
+                  </h3>
+                  <p className="text-gray-500">
+                    We couldn't find venues similar to this one at the moment.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

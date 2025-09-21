@@ -154,7 +154,7 @@ export const searchVenues = async (filters: {
 /**
  * Generate embedding text for a venue (same logic as in embeddings.ts)
  */
-const generateVenueEmbeddingText = (venue: {
+export const generateVenueEmbeddingText = (venue: {
   name: string;
   description: string;
   category: string;
@@ -471,4 +471,78 @@ export const getVenuesByIds = async (venueIds: string[]): Promise<Venue[]> => {
   // Maintain the order of the input IDs
   const venueMap = new Map(data.map(venue => [venue.id, convertToVenue(venue)]));
   return venueIds.map(id => venueMap.get(id)).filter(Boolean) as Venue[];
+};
+export const getSimilarVenues = async (venueId: string): Promise<Venue[]> => {
+  try {
+    // Get the current venue details
+    const venue = await getVenueById(venueId);
+    if (!venue) return [];
+
+    // Generate a search query based on venue properties
+    const searchQuery = generateVenueEmbeddingText({
+      name: venue.name,
+      description: venue.description,
+      category: venue.category,
+      city: venue.location.city,
+      state: venue.location.state,
+      seated_capacity: venue.capacity.seated,
+      standing_capacity: venue.capacity.standing,
+      hourly_price: venue.price.hourly * 100, // Convert back to cents
+      daily_price: venue.price.daily * 100,
+      amenities: venue.amenities,
+      rating: venue.rating,
+      reviews_count: venue.reviews,
+      featured: venue.featured,
+    });
+
+    // Import the semantic search function
+    const { searchVenuesSemanticWithDetails } = await import('./embeddings');
+    
+    // Perform semantic search
+    const similarVenues = await searchVenuesSemanticWithDetails(
+      searchQuery,
+      0.4, // match threshold
+      6    // get 6 results to filter out the original venue
+    );
+
+    // Transform and filter out the original venue
+    const transformedVenues: Venue[] = similarVenues
+      .filter(dbVenue => dbVenue.id !== venueId) // Exclude the original venue
+      .slice(0, 5) // Limit to 5 similar venues
+      .map(dbVenue => ({
+        id: dbVenue.id,
+        name: dbVenue.name,
+        description: dbVenue.description,
+        location: {
+          address: dbVenue.address,
+          city: dbVenue.city,
+          state: dbVenue.state,
+          zipCode: dbVenue.zip_code,
+          latitude: dbVenue.latitude || undefined,
+          longitude: dbVenue.longitude || undefined,
+        },
+        capacity: {
+          seated: dbVenue.seated_capacity,
+          standing: dbVenue.standing_capacity,
+        },
+        price: {
+          hourly: dbVenue.hourly_price / 100,
+          daily: dbVenue.daily_price / 100,
+        },
+        amenities: dbVenue.amenities || [],
+        images: dbVenue.images || [],
+        category: dbVenue.category,
+        rating: dbVenue.rating,
+        reviews: dbVenue.reviews_count,
+        availability: dbVenue.availability,
+        featured: dbVenue.featured,
+        status: dbVenue.status,
+        owner_id: dbVenue.owner_id,
+      }));
+
+    return transformedVenues;
+  } catch (error) {
+    console.error('Error finding similar venues:', error);
+    return [];
+  }
 };
