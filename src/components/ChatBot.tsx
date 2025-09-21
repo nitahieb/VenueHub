@@ -298,7 +298,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     onClick={handleClearHistory}
     className="text-sm bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg transition"
   >
-    Clear History
+    Clear
   </button>
       </div>
       
