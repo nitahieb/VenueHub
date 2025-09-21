@@ -86,13 +86,33 @@ const ChatBot: React.FC = () => {
       }
 
       const responseData = await apiResponse.json();
+      console.log('Raw response from proxy:', responseData);
       
       if (!responseData.success) {
         throw new Error(responseData.error || 'Unknown error from proxy');
       }
 
-      // Extract the response text - it should always be a string from the proxy
-      response = responseData.response || "I found some great venues for you!";
+      // Extract the response text and handle potential JSON parsing
+      let responseText = responseData.response || "I found some great venues for you!";
+      
+      // Check if the response is a JSON string that needs parsing
+      if (typeof responseText === 'string' && responseText.startsWith('{')) {
+        try {
+          const parsedResponse = JSON.parse(responseText);
+          response = parsedResponse.result || responseText;
+          
+          // If venue_ids are in the parsed response, use them
+          if (parsedResponse.venue_ids && Array.isArray(parsedResponse.venue_ids)) {
+            console.log('Found venue_ids in parsed response:', parsedResponse.venue_ids);
+            // The proxy should have already fetched venues, but let's check responseData.venues too
+          }
+        } catch (parseError) {
+          console.log('Response is not JSON, using as plain text');
+          response = responseText;
+        }
+      } else {
+        response = responseText;
+      }
       
       // Transform venue data if provided
       if (responseData.venues && Array.isArray(responseData.venues)) {
