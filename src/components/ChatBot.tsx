@@ -91,7 +91,15 @@ const ChatBot: React.FC = () => {
         throw new Error(responseData.error || 'Unknown error from proxy');
       }
 
-      response = responseData.response || "I found some great venues for you!";
+      // Ensure response is always a string
+      if (typeof responseData.response === 'string') {
+        response = responseData.response;
+      } else if (responseData.response && typeof responseData.response === 'object') {
+        // If response is an object, stringify it or extract string content
+        response = JSON.stringify(responseData.response);
+      } else {
+        response = "I found some great venues for you!";
+      }
       
       // Transform venue data if provided
       if (responseData.venues && Array.isArray(responseData.venues)) {
@@ -176,7 +184,7 @@ const ChatBot: React.FC = () => {
                     ? 'bg-blue-600 text-white' 
                     : 'bg-gray-100 text-gray-900'
                 }`}>
-                  <p className="text-sm">{message.content}</p>
+                  <div className="text-sm whitespace-pre-wrap">{message.content}</div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
