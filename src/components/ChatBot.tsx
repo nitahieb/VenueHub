@@ -98,9 +98,12 @@ const ChatBot: React.FC = () => {
       response = responseText;
       
       // Transform venue data if provided
-      if (responseData.venues && Array.isArray(responseData.venues)) {
+      if (responseData.venues && Array.isArray(responseData.venues) && responseData.venues.length > 0) {
         venueRecommendations = responseData.venues.map(transformVenue);
         console.log(`Received ${venueRecommendations.length} venue recommendations:`, venueRecommendations);
+      } else {
+        console.log('No venues in responseData.venues:', responseData.venues);
+        console.log('Full responseData:', responseData);
       }
       
     } catch (error) {
