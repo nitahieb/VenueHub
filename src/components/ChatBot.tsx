@@ -57,57 +57,61 @@ const ChatBot: React.FC = () => {
   }, [messages, isTyping]);
 
   const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
-    let response = '';
-    let venueRecommendations: Venue[] = [];
+  let response = '';
+  let venueRecommendations: Venue[] = [];
+  
+  try {
+    console.log('Calling Smythos API via proxy with requirements:', userMessage);
     
-    try {
-      console.log('Calling Smythos API via proxy with requirements:', userMessage);
-      
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Supabase configuration not found');
-      }
-      
-      const apiResponse = await fetch(`${supabaseUrl}/functions/v1/smythos-chat-proxy`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-        },
-        body: JSON.stringify({
-          requirements: userMessage
-        }),
-      });
-
-      if (!apiResponse.ok) {
-        throw new Error(`Proxy API error: ${apiResponse.status}`);
-      }
-
-      const responseData = await apiResponse.json();
-      console.log('Raw response from proxy:', responseData);
-      
-      if (!responseData.success) {
-        throw new Error(responseData.error || 'Unknown error from proxy');
-      }
-
-      // Use the response directly from the proxy
-      response = responseData.response || "I found some great venues for you!";
-      
-    } catch (error) {
-      console.error('Error calling Smythos API via proxy:', error);
-      response = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
-      venueRecommendations = [];
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Supabase configuration not found');
     }
-        console.log('No venues received from proxy');
-      id: Date.now().toString(),
-      type: 'bot',
-      content: response,
-      timestamp: new Date(),
-      venueRecommendations: venueRecommendations,
-    };
+    
+    const apiResponse = await fetch(`${supabaseUrl}/functions/v1/smythos-chat-proxy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+      },
+      body: JSON.stringify({
+        requirements: userMessage
+      }),
+    });
+
+    if (!apiResponse.ok) {
+      throw new Error(`Proxy API error: ${apiResponse.status}`);
+    }
+
+    const responseData = await apiResponse.json();
+    console.log('Raw response from proxy:', responseData);
+    
+    if (!responseData.success) {
+      throw new Error(responseData.error || 'Unknown error from proxy');
+    }
+
+    // Use the response directly from the proxy
+    response = responseData.response || "I found some great venues for you!";
+    // TODO: If your proxy can return venues, transform them here
+    // venueRecommendations = responseData.venues?.map(transformVenue) || [];
+
+  } catch (error) {
+    console.error('Error calling Smythos API via proxy:', error);
+    response = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
+    venueRecommendations = [];
+  }
+
+  // ✅ Properly return the ChatMessage object
+  return {
+    id: Date.now().toString(),
+    type: 'bot',
+    content: response,
+    timestamp: new Date(),
+    venueRecommendations: venueRecommendations,
   };
+};
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
