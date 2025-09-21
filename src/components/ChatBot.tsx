@@ -20,44 +20,12 @@ const ChatBot: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // ---------------------------
-  // Load Smyth AI ChatBot Script
-  // ---------------------------
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = "https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/static/embodiment/chatBot/chatbot-v2.js";
-    script.async = true;
-
-    script.onload = () => {
-      if (window.ChatBot) {
-        window.ChatBot.init({
-          domain: 'cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai',
-          isChatOnly: false,
-          allowAttachments: false,
-          introMessage: 'Hello, how can I assist you today?',
-          // Optional: add colors or other settings here
-          // colors: { primary: "#3b82f6", secondary: "#60a5fa" }
-        });
-      }
-    };
-
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
-  // ---------------------------
-  // Persist messages to localStorage
-  // ---------------------------
+  // Persist messages
   useEffect(() => {
     localStorage.setItem('chatMessages', JSON.stringify(messages));
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(() => { scrollToBottom(); }, [messages, isTyping]);
 
   const handleClearHistory = () => {
@@ -71,9 +39,71 @@ const ChatBot: React.FC = () => {
   };
 
   // ---------------------------
-  // Your existing handleSendMessage + generateBotResponse
+  // Initialize Smyth AI and subscribe messages
   // ---------------------------
-  const handleSendMessage = async () => {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = "https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/static/embodiment/chatBot/chatbot-v2.js";
+    script.async = true;
+
+    script.onload = () => {
+      if (window.ChatBot) {
+        window.ChatBot.init({
+          domain: 'cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai',
+          isChatOnly: false,
+          allowAttachments: false,
+          introMessage: 'Hello, how can I assist you today?',
+          // Optional colors:
+          // colors: { primary: "#3b82f6", secondary: "#60a5fa" }
+        });
+
+        // Listen for new bot messages
+        window.ChatBot.onMessage((msg: any) => {
+          // Smyth AI messages may have text and venue recommendations
+          const botMessage: ChatMessage = {
+            id: Date.now().toString(),
+            type: 'bot',
+            content: msg.text || msg.message || '',
+            timestamp: new Date(),
+            venueRecommendations: msg.venues?.map((v: any) => ({
+              id: v.id,
+              name: v.name,
+              description: v.description,
+              location: {
+                address: v.address,
+                city: v.city,
+                state: v.state,
+                zipCode: v.zip_code,
+                latitude: v.latitude,
+                longitude: v.longitude,
+              },
+              capacity: { seated: v.seated_capacity, standing: v.standing_capacity },
+              price: { hourly: v.hourly_price / 100, daily: v.daily_price / 100 },
+              amenities: v.amenities || [],
+              images: v.images || [],
+              category: v.category,
+              rating: v.rating,
+              reviews: v.reviews_count,
+              availability: v.availability,
+              featured: v.featured,
+              status: v.status,
+              owner_id: v.owner_id,
+            })),
+          };
+
+          setMessages(prev => [...prev, botMessage]);
+        });
+      }
+    };
+
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, []);
+
+  // ---------------------------
+  // Handle user sending messages
+  // ---------------------------
+  const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
 
     const userMessage: ChatMessage = {
@@ -84,16 +114,17 @@ const ChatBot: React.FC = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+
+    // Send to Smyth AI
+    if (window.ChatBot) {
+      window.ChatBot.sendMessage(inputMessage);
+    }
+
     setInputMessage('');
     setIsTyping(true);
 
-    // Use your existing generateBotResponse function here
-    setTimeout(() => {
-      generateBotResponse(inputMessage).then(botResponse => {
-        setMessages(prev => [...prev, botResponse]);
-        setIsTyping(false);
-      });
-    }, 1500);
+    // Stop typing after a short delay (Smyth AI may trigger onMessage later)
+    setTimeout(() => setIsTyping(false), 1000);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -104,11 +135,12 @@ const ChatBot: React.FC = () => {
   };
 
   // ---------------------------
-  // JSX (your current layout)
+  // JSX (your existing layout)
   // ---------------------------
   return (
     <div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
-      {/* ... your header, messages, input code stays unchanged ... */}
+      {/* Header, messages, input UI stays the same */}
+      {/* ... keep your JSX code exactly as before ... */}
     </div>
   );
 };
