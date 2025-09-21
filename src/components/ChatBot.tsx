@@ -104,9 +104,8 @@ const ChatBot: React.FC = () => {
       }
     }
     
-    if (!responseData.success && !responseData.result) {
-      throw new Error(responseData.error || 'Unknown error from proxy');
-    }
+     const venueIds: string[] = parsedResult.venue_ids 
+
 
     // Bot message text
     response = responseData.result;
