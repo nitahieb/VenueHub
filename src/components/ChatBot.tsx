@@ -84,7 +84,7 @@ const ChatBot: React.FC = () => {
     }
 
     let responseData = await apiResponse.json();
-    responseData = await responseData.json()
+    responseData = await responseData.result.json()
     
     console.log('Raw response from proxy:', responseData);
     
