@@ -35,6 +35,9 @@ const VenueDetail: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    // Scroll to top when component mounts or venue ID changes
+    window.scrollTo(0, 0);
+    
     const loadVenue = async () => {
       if (!id) return;
       
