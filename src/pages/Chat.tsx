@@ -1,5 +1,6 @@
 import React from 'react';
 import ChatBot from '../components/ChatBot';
+import ChatBotEmbed from '../components/ChatBotEmbed';
 
 const Chat: React.FC = () => {
   return (
@@ -16,6 +17,7 @@ const Chat: React.FC = () => {
         </div>
         
         <ChatBot />
+        <ChatBotEmbed />
       </div>
     </div>
   );
