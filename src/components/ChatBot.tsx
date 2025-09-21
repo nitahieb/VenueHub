@@ -107,12 +107,9 @@ const ChatBot: React.FC = () => {
      const venueIds: string[] = parsedResult.venue_ids 
 
 
-    // Bot message text
-    response = responseData.result;
-    console.log(response)
 
     // If there are venue_ids, fetch their details from Supabase
-    if (responseData.venue_ids && responseData.venue_ids.length > 0) {
+    if (parsedResult.venue_ids && parsedResult.venue_ids.length > 0) {
       const venuesResponse = await fetch(`${supabaseUrl}/rest/v1/venues?id=in.(${responseData.venue_ids.join(',')})`, {
         headers: {
           'apikey': supabaseAnonKey,
