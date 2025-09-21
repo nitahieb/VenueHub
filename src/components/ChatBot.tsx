@@ -76,9 +76,7 @@ const ChatBot: React.FC = () => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${supabaseAnonKey}`,
       },
-      body: JSON.stringify({
-        requirements: userMessage
-      }),
+      body: JSON.stringify({ requirements: userMessage }),
     });
 
     if (!apiResponse.ok) {
@@ -88,14 +86,32 @@ const ChatBot: React.FC = () => {
     const responseData = await apiResponse.json();
     console.log('Raw response from proxy:', responseData);
     
-    if (!responseData.success) {
+    if (!responseData.success && !responseData.result) {
       throw new Error(responseData.error || 'Unknown error from proxy');
     }
 
-    // Use the response directly from the proxy
-    response = responseData.response || "I found some great venues for you!";
-    // TODO: If your proxy can return venues, transform them here
-    // venueRecommendations = responseData.venues?.map(transformVenue) || [];
+    // Bot message text
+    response = responseData.result || "I found some great venues for you!";
+
+    // If there are venue_ids, fetch their details from Supabase
+    if (responseData.venue_ids && responseData.venue_ids.length > 0) {
+      const venuesResponse = await fetch(`${supabaseUrl}/rest/v1/venues?id=in.(${responseData.venue_ids.join(',')})`, {
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!venuesResponse.ok) {
+        throw new Error(`Failed to fetch venues: ${venuesResponse.status}`);
+      }
+
+      const venuesData = await venuesResponse.json();
+      console.log('Fetched venues from Supabase:', venuesData);
+
+      venueRecommendations = venuesData.map(transformVenue);
+    }
 
   } catch (error) {
     console.error('Error calling Smythos API via proxy:', error);
@@ -103,15 +119,15 @@ const ChatBot: React.FC = () => {
     venueRecommendations = [];
   }
 
-  // ✅ Properly return the ChatMessage object
   return {
     id: Date.now().toString(),
     type: 'bot',
     content: response,
     timestamp: new Date(),
-    venueRecommendations: venueRecommendations,
+    venueRecommendations,
   };
 };
+
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
