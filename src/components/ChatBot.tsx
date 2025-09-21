@@ -56,7 +56,7 @@ const ChatBot: React.FC = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
+const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
   let contentText = '';
   let venueRecommendations: Venue[] = [];
 
@@ -83,57 +83,78 @@ const ChatBot: React.FC = () => {
       throw new Error(`Proxy API error: ${apiResponse.status}`);
     }
 
-    const responseData = await apiResponse.json();
-    console.log('Raw proxy response:', responseData);
-
-    let parsedResult: any = responseData.result;
-
-    // ✅ If result is a JSON string, parse it
-    if (typeof parsedResult === 'string') {
-      try {
-        if (parsedResult.trim().startsWith('{') || parsedResult.trim().startsWith('[')) {
-          parsedResult = JSON.parse(parsedResult);
-          console.log('Parsed JSON from result:', parsedResult);
-        } else {
-          // It's just plain text
-          parsedResult = { result: parsedResult };
-        }
-      } catch (parseErr) {
-        console.warn('Failed to parse result as JSON, using raw string:', parsedResult);
-        parsedResult = { result: parsedResult };
-      }
+    let responseData: any;
+    try {
+      responseData = await apiResponse.json();
+    } catch (jsonErr) {
+      console.warn('Failed to parse API response as JSON:', jsonErr);
+      responseData = null;
     }
 
-    // Now we should have a parsed object with result + venue_ids
+    console.log('Raw proxy response:', responseData);
+
+    // ✅ Safely handle undefined or unexpected shapes
+    let parsedResult: any = null;
+    if (responseData && typeof responseData === 'object' && 'result' in responseData) {
+      parsedResult = responseData.result;
+    } else if (typeof responseData === 'string') {
+      parsedResult = responseData;
+    }
+
+    if (parsedResult) {
+      if (typeof parsedResult === 'string') {
+        try {
+          if (parsedResult.trim().startsWith('{') || parsedResult.trim().startsWith('[')) {
+            parsedResult = JSON.parse(parsedResult);
+            console.log('Parsed JSON from result:', parsedResult);
+          } else {
+            parsedResult = { result: parsedResult };
+          }
+        } catch (parseErr) {
+          console.warn('Failed to parse result as JSON string, using raw text:', parsedResult);
+          parsedResult = { result: parsedResult };
+        }
+      }
+    } else {
+      parsedResult = { result: "I found some great venues for you!", venue_ids: [] };
+    }
+
+    // Now safely extract fields
     contentText = parsedResult.result || "I found some great venues for you!";
-    const venueIds: string[] = parsedResult.venue_ids || [];
+    const venueIds: string[] = Array.isArray(parsedResult.venue_ids) ? parsedResult.venue_ids : [];
 
     if (venueIds.length > 0) {
       const quoted = venueIds.map((id) => `"${id}"`).join(',');
       const venuesUrl = `${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`;
 
       console.log('Fetching venues from Supabase REST:', venuesUrl);
-      const venuesResponse = await fetch(venuesUrl, {
-        headers: {
-          apikey: supabaseAnonKey,
-          Authorization: `Bearer ${supabaseAnonKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      try {
+        const venuesResponse = await fetch(venuesUrl, {
+          headers: {
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (venuesResponse.ok) {
-        const venuesData = await venuesResponse.json();
-        console.log('Fetched venues:', venuesData);
-        venueRecommendations = venuesData.map(transformVenue);
-      } else {
-        console.warn('Failed to fetch venues:', venuesResponse.status);
+        if (venuesResponse.ok) {
+          const venuesData = await venuesResponse.json();
+          console.log('Fetched venues:', venuesData);
+          if (Array.isArray(venuesData)) {
+            venueRecommendations = venuesData.map(transformVenue);
+          }
+        } else {
+          console.warn('Failed to fetch venues:', venuesResponse.status);
+        }
+      } catch (venueFetchErr) {
+        console.error('Failed to fetch venues from Supabase:', venueFetchErr);
       }
     }
 
   } catch (error) {
     console.error('Error calling Smythos API via proxy:', error);
-    contentText = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
-    venueRecommendations = [];
+    contentText =
+      "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
   }
 
   return {
@@ -144,6 +165,7 @@ const ChatBot: React.FC = () => {
     venueRecommendations,
   };
 };
+
 
 
   const handleSendMessage = async () => {
