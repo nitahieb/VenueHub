@@ -92,27 +92,15 @@ const ChatBot: React.FC = () => {
         throw new Error(responseData.error || 'Unknown error from proxy');
       }
 
-      // Extract the response text and handle potential JSON parsing
-      let responseText = responseData.response || "I found some great venues for you!";
-      
-      response = responseText;
-      
-      // Transform venue data if provided
-      if (responseData.venues && Array.isArray(responseData.venues) && responseData.venues.length > 0) {
-        venueRecommendations = responseData.venues.map(transformVenue);
-        console.log(`Received ${venueRecommendations.length} venue recommendations:`, venueRecommendations);
-      } else {
-        console.log('No venues in responseData.venues:', responseData.venues);
-        console.log('Full responseData:', responseData);
-      }
+      // Use the response directly from the proxy
+      response = responseData.response || "I found some great venues for you!";
       
     } catch (error) {
       console.error('Error calling Smythos API via proxy:', error);
       response = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
       venueRecommendations = [];
     }
-
-    return {
+        console.log('No venues received from proxy');
       id: Date.now().toString(),
       type: 'bot',
       content: response,

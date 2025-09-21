@@ -153,16 +153,8 @@ Deno.serve(async (req: Request) => {
 
     console.log('Parsed Smythos data:', smythosData);
 
-    // Ensure the result is always a string for React rendering
-    let responseContent: string;
-    if (typeof smythosData.result === 'string') {
-      responseContent = smythosData.result;
-    } else if (typeof smythosData.result === 'object') {
-      // If result is an object, stringify it or extract a string field
-      responseContent = JSON.stringify(smythosData.result);
-    } else {
-      responseContent = String(smythosData.result || "I found some venues for you!");
-    }
+    // Extract the result text directly - it should already be a string
+    const responseContent = smythosData.result || "I found some venues for you!";
 
     // Fetch venue details if venue IDs are provided
     let venues = [];
