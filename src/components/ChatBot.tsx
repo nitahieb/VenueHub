@@ -126,6 +126,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     if (!apiResponse.ok) {
       throw new Error(`Proxy API error: ${apiResponse.status}`);
     }
+    console.log(apiResponse)
 
     // parse proxy top-level JSON
     let responseData: any = null;
