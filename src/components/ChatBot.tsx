@@ -35,18 +35,29 @@ const transformVenue = (dbVenue: any): Venue => ({
   owner_id: dbVenue.owner_id,
 });
 
+
 const ChatBot: React.FC = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'bot',
-      content: "Hi! I'm your AI venue assistant. I can help you find the perfect event space. Tell me about your event - what type of event are you planning, how many guests, your budget, and preferred location?",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    // Load from localStorage on first render
+    const saved = localStorage.getItem('chatMessages');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: '1',
+        type: 'bot',
+        content: "Hi! I'm your AI venue assistant. I can help you find the perfect event space. Tell me about your event - what type of event are you planning, how many guests, your budget, and preferred location?",
+        timestamp: new Date(),
+      },
+    ];
+  });
+
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // ✅ Persist to localStorage whenever messages change
+  useEffect(() => {
+    localStorage.setItem('chatMessages', JSON.stringify(messages));
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
