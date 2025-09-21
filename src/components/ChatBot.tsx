@@ -72,6 +72,16 @@ const [messages, setMessages] = useState<ChatMessage[]>(() => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const handleClearHistory = () => {
+  localStorage.removeItem('chatMessages');
+  setMessages([{
+    id: '1',
+    type: 'bot',
+    content: "Hi! I'm your AI venue assistant. Let's start fresh — what event are you planning?",
+    timestamp: new Date(),
+  }]);
+};
+
   // ✅ Persist to localStorage whenever messages change
   useEffect(() => {
     localStorage.setItem('chatMessages', JSON.stringify(messages));
