@@ -96,6 +96,8 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log('Proxying request to Smythos API with requirements:', requestData.requirements);
+    console.log("Conversation history:", requestData.history ?? []);
+
 
     // Make request to Smythos API
     const smythosResponse = await fetch('https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/api/find_venues', {
@@ -104,7 +106,8 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        requirements: requestData.requirements
+        requirements: requestData.requirements,
+        history: Array.isArray(requestData.history) ? requestData.history : []
       }),
     });
 
