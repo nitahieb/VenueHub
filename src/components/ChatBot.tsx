@@ -84,9 +84,25 @@ const ChatBot: React.FC = () => {
     }
 
     let responseData = await apiResponse.json();
-    responseData = await responseData.result.json()
     
     console.log('Raw response from proxy:', responseData);
+        let parsedResult: any = responseData.result;
+
+    // ✅ If result is a JSON string, parse it
+    if (typeof parsedResult === 'string') {
+      try {
+        if (parsedResult.trim().startsWith('{') || parsedResult.trim().startsWith('[')) {
+          parsedResult = JSON.parse(parsedResult);
+          console.log('Parsed JSON from result:', parsedResult);
+        } else {
+          // It's just plain text
+          parsedResult = { result: parsedResult };
+        }
+      } catch (parseErr) {
+        console.warn('Failed to parse result as JSON, using raw string:', parsedResult);
+        parsedResult = { result: parsedResult };
+      }
+    }
     
     if (!responseData.success && !responseData.result) {
       throw new Error(responseData.error || 'Unknown error from proxy');
