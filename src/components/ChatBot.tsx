@@ -351,7 +351,6 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
   </div>
 )}
 
-                )}
               </div>
             </div>
           </div>
