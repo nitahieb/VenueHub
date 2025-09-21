@@ -83,7 +83,9 @@ const ChatBot: React.FC = () => {
       throw new Error(`Proxy API error: ${apiResponse.status}`);
     }
 
-    const responseData = await apiResponse.json().result.json();
+    let responseData = await apiResponse.json();
+    responseData = await responseData.json()
+    
     console.log('Raw response from proxy:', responseData);
     
     if (!responseData.success && !responseData.result) {
