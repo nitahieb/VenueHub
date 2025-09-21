@@ -290,6 +290,19 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
   };
 
   return (
+    
+    <script src="https://cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai/static/embodiment/chatBot/chatbot-v2.js"></script>
+    <script>
+        ChatBot.init({
+            domain: 'cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai',
+            isChatOnly: false,
+            
+            allowAttachments: false,
+            // ... additional settings ...
+            introMessage: 'Hello, how can I assist you today?',
+            // ... colors settings go here ...
+        });
+    </script>
 <div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
   {/* Header */}
   <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between">
