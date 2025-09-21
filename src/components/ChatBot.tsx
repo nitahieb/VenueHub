@@ -37,10 +37,10 @@ const transformVenue = (dbVenue: any): Venue => ({
 
 
 const ChatBot: React.FC = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    // Load from localStorage on first render
+const [messages, setMessages] = useState<ChatMessage[]>(() => {
+  try {
     const saved = localStorage.getItem('chatMessages');
-    return saved ? JSON.parse(saved) : [
+    if (!saved) return [
       {
         id: '1',
         type: 'bot',
@@ -48,7 +48,25 @@ const ChatBot: React.FC = () => {
         timestamp: new Date(),
       },
     ];
-  });
+
+    const parsed = JSON.parse(saved);
+    // Convert timestamp strings back into Date objects
+    return parsed.map((m: any) => ({
+      ...m,
+      timestamp: new Date(m.timestamp),
+    }));
+  } catch (e) {
+    console.error("Failed to load chat history:", e);
+    return [
+      {
+        id: '1',
+        type: 'bot',
+        content: "Hi! I'm your AI venue assistant. Let's start fresh — what event are you planning?",
+        timestamp: new Date(),
+      },
+    ];
+  }
+});
 
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
