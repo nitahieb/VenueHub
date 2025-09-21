@@ -1,7 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
-import { ChatMessage } from '../types/venue';
+import { ChatMessage, Venue } from '../types/venue';
 import VenueCard from './VenueCard';
+
+// Transform database venue to frontend Venue type
+const transformVenue = (dbVenue: any): Venue => ({
+  id: dbVenue.id,
+  name: dbVenue.name,
+  description: dbVenue.description,
+  location: {
+    address: dbVenue.address,
+    city: dbVenue.city,
+    state: dbVenue.state,
+    zipCode: dbVenue.zip_code,
+    latitude: dbVenue.latitude || undefined,
+    longitude: dbVenue.longitude || undefined,
+  },
+  capacity: {
+    seated: dbVenue.seated_capacity,
+    standing: dbVenue.standing_capacity,
+  },
+  price: {
+    hourly: dbVenue.hourly_price / 100, // Convert from cents to dollars
+    daily: dbVenue.daily_price / 100,
+  },
+  amenities: dbVenue.amenities || [],
+  images: dbVenue.images || [],
+  category: dbVenue.category,
+  rating: dbVenue.rating,
+  reviews: dbVenue.reviews_count,
+  availability: dbVenue.availability,
+  featured: dbVenue.featured,
+  status: dbVenue.status,
+  owner_id: dbVenue.owner_id,
+});
 
 const ChatBot: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -26,7 +58,7 @@ const ChatBot: React.FC = () => {
 
   const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
     let response = '';
-    let venueRecommendations = [];
+    let venueRecommendations: Venue[] = [];
     
     try {
       console.log('Calling Smythos API via proxy with requirements:', userMessage);
@@ -60,7 +92,12 @@ const ChatBot: React.FC = () => {
       }
 
       response = responseData.response || "I found some great venues for you!";
-      venueRecommendations = [];
+      
+      // Transform venue data if provided
+      if (responseData.venues && Array.isArray(responseData.venues)) {
+        venueRecommendations = responseData.venues.map(transformVenue);
+        console.log(`Received ${venueRecommendations.length} venue recommendations`);
+      }
       
     } catch (error) {
       console.error('Error calling Smythos API via proxy:', error);
@@ -144,6 +181,22 @@ const ChatBot: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-1">
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
+                
+                {/* Venue Recommendations */}
+                {message.venueRecommendations && message.venueRecommendations.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-sm text-gray-600 mb-3 font-medium">
+                      Recommended Venues ({message.venueRecommendations.length})
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
+                      {message.venueRecommendations.map((venue) => (
+                        <div key={venue.id} className="transform scale-90 origin-top-left">
+                          <VenueCard venue={venue} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 
                 {message.venueRecommendations && message.venueRecommendations.length > 0 && (
                   <div className="mt-4 space-y-4">

@@ -2,16 +2,22 @@
  * Smythos Chat Proxy Edge Function
  * 
  * This function acts as a proxy to the Smythos API to avoid CORS issues
- * when calling from the frontend.
+ * and enriches responses with actual venue data from the database.
  */
 
 interface SmythosChatRequest {
   requirements: string;
 }
 
+interface SmythosApiResponse {
+  result: string;
+  venue_ids?: string[];
+}
+
 interface SmythosChatResponse {
   success: boolean;
   response?: string;
+  venues?: any[];
   error?: string;
 }
 
@@ -115,14 +121,73 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get response text from Smythos API
-    const responseText = await smythosResponse.text();
-    console.log('Smythos API response received, length:', responseText.length);
+    // Parse Smythos response
+    let smythosData: SmythosApiResponse;
+    try {
+      const responseText = await smythosResponse.text();
+      console.log('Raw Smythos response:', responseText);
+      
+      // Try to parse as JSON first (if Smythos returns structured data)
+      try {
+        smythosData = JSON.parse(responseText);
+      } catch {
+        // If not JSON, treat as plain text response
+        smythosData = { result: responseText };
+      }
+    } catch (error) {
+      console.error('Error parsing Smythos response:', error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Failed to parse Smythos API response" 
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
 
-    // Return successful response
+    console.log('Parsed Smythos data:', smythosData);
+
+    // Fetch venue details if venue IDs are provided
+    let venues = [];
+    if (smythosData.venue_ids && Array.isArray(smythosData.venue_ids) && smythosData.venue_ids.length > 0) {
+      console.log('Fetching venue details for IDs:', smythosData.venue_ids);
+      
+      try {
+        // Initialize Supabase client
+        const { createClient } = await import("npm:@supabase/supabase-js@2");
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        // Fetch venues by IDs
+        const { data: venueData, error: venueError } = await supabase
+          .from('venues')
+          .select('*')
+          .in('id', smythosData.venue_ids)
+          .eq('status', 'approved');
+
+        if (venueError) {
+          console.error('Error fetching venues:', venueError);
+        } else {
+          venues = venueData || [];
+          console.log(`Successfully fetched ${venues.length} venues`);
+        }
+      } catch (error) {
+        console.error('Error in venue fetching process:', error);
+      }
+    }
+
+    // Return successful response with both text and venue data
     const response: SmythosChatResponse = {
       success: true,
-      response: responseText,
+      response: smythosData.result,
+      venues: venues,
     };
 
     return new Response(JSON.stringify(response), {
