@@ -330,30 +330,27 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
               </div>
               <div>
                 <div className={`rounded-xl px-4 py-2 ${
-                  message.type === 'user' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-900'
-                }`}>
-                  <div className="text-sm whitespace-pre-line">{message.content}</div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-                
-                {/* Venue Recommendations */}
-                {message.venueRecommendations && message.venueRecommendations.length > 0 && (
-                  <div className="mt-4">
-                    <div className="text-sm text-gray-600 mb-3 font-medium">
-                      Recommended Venues ({message.venueRecommendations.length})
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
-                      {message.venueRecommendations.map((venue) => (
-                        <div key={venue.id} className="transform scale-90 origin-top-left">
-                          <VenueCard venue={venue} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+  message.type === 'user' 
+    ? 'bg-blue-600 text-white' 
+    : 'bg-gray-100 text-gray-900'
+}`}>
+  <div className="text-sm whitespace-pre-line">{message.content}</div>
+</div>
+{message.venueRecommendations && message.venueRecommendations.length > 0 && (
+  <div className="mt-4">
+    <div className="text-sm text-gray-600 mb-3 font-medium">
+      Recommended Venues ({message.venueRecommendations.length})
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
+      {message.venueRecommendations.map((venue) => (
+        <div key={venue.id} className="transform scale-90 origin-top-left">
+          <VenueCard venue={venue} />
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
                 )}
               </div>
             </div>
