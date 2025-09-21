@@ -11,7 +11,7 @@ const ChatBotEmbed: React.FC = () => {
       if (window.ChatBot) {
         window.ChatBot.init({
           domain: 'cmfsk9ysip7q123qun1z7cfkj.agent.pa.smyth.ai',
-          isChatOnly: false,
+          isChatOnly: true,
           allowAttachments: false,
           introMessage: 'Hello, how can I assist you today?',
           // Add other configuration options as needed
