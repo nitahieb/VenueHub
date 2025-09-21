@@ -61,7 +61,16 @@ const [messages, setMessages] = useState<ChatMessage[]>(() => {
       {
         id: '1',
         type: 'bot',
-        content: "Hi! I'm your AI venue assistant. Let's start fresh — what event are you planning?",
+        content: ```Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
+
+                    To get started, please tell me:
+                    - What type of event you're planning (wedding, party, corporate event, etc.)
+                    - The location or city you'd like the venue in
+                    - How many guests you expect
+                    - Your budget (hourly or daily)
+                    - Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
+                    
+                    Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!```,
         timestamp: new Date(),
       },
     ];
@@ -77,7 +86,16 @@ const [messages, setMessages] = useState<ChatMessage[]>(() => {
   setMessages([{
     id: '1',
     type: 'bot',
-    content: "Hi! I'm your AI venue assistant. Let's start fresh — what event are you planning?",
+    content: ```Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
+
+                    To get started, please tell me:
+                    - What type of event you're planning (wedding, party, corporate event, etc.)
+                    - The location or city you'd like the venue in
+                    - How many guests you expect
+                    - Your budget (hourly or daily)
+                    - Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
+                    
+                    Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!```,
     timestamp: new Date(),
   }]);
 };
