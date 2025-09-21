@@ -109,9 +109,9 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
       throw new Error('Supabase configuration not found');
     }
     const history = messages.map(m => ({
-  role: m.type === 'user' ? 'user' : 'assistant',
-  content: m.content,
-}));
+    role: m.type === 'user' ? 'user' : 'assistant',
+    content: m.content,
+    }));
 
     const apiResponse = await fetch(`${supabaseUrl}/functions/v1/smythos-chat-proxy`, {
       method: 'POST',
@@ -119,7 +119,8 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${supabaseAnonKey}`,
       },
-      body: JSON.stringify({ requirements: userMessage }),
+      body: JSON.stringify({ requirements: userMessage,
+                           history}),
     });
 
     if (!apiResponse.ok) {
