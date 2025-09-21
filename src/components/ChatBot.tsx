@@ -61,7 +61,7 @@ const [messages, setMessages] = useState<ChatMessage[]>(() => {
       {
         id: '1',
         type: 'bot',
-        content: ```Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
+        content: `Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
 
                     To get started, please tell me:
                     - What type of event you're planning (wedding, party, corporate event, etc.)
@@ -70,7 +70,7 @@ const [messages, setMessages] = useState<ChatMessage[]>(() => {
                     - Your budget (hourly or daily)
                     - Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
                     
-                    Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!```,
+                    Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!`,
         timestamp: new Date(),
       },
     ];
