@@ -197,16 +197,6 @@ const ChatBot: React.FC = () => {
                     </div>
                   </div>
                 )}
-                
-                {message.venueRecommendations && message.venueRecommendations.length > 0 && (
-                  <div className="mt-4 space-y-4">
-                    {message.venueRecommendations.map((venue) => (
-                      <div key={venue.id} className="max-w-sm">
-                        <VenueCard venue={venue} />
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </div>
