@@ -294,13 +294,14 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
           <h2 className="text-lg font-semibold">AI Venue Assistant</h2>
           <p className="text-blue-100 text-sm">Find your perfect event space</p>
         </div>
-      </div>
-        <button
+          <button
     onClick={handleClearHistory}
     className="text-sm bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg transition"
   >
     Clear History
   </button>
+      </div>
+      
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
