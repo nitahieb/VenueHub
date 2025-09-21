@@ -57,19 +57,19 @@ const ChatBot: React.FC = () => {
   }, [messages, isTyping]);
 
   const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
-  let response = '';
+  let contentText = '';
   let venueRecommendations: Venue[] = [];
-  
+
   try {
     console.log('Calling Smythos API via proxy with requirements:', userMessage);
-    
+
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
+
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error('Supabase configuration not found');
     }
-    
+
     const apiResponse = await fetch(`${supabaseUrl}/functions/v1/smythos-chat-proxy`, {
       method: 'POST',
       headers: {
@@ -83,10 +83,10 @@ const ChatBot: React.FC = () => {
       throw new Error(`Proxy API error: ${apiResponse.status}`);
     }
 
-    let responseData = await apiResponse.json();
-    
-    console.log('Raw response from proxy:', responseData);
-        let parsedResult: any = responseData.result;
+    const responseData = await apiResponse.json();
+    console.log('Raw proxy response:', responseData);
+
+    let parsedResult: any = responseData.result;
 
     // ✅ If result is a JSON string, parse it
     if (typeof parsedResult === 'string') {
@@ -103,41 +103,43 @@ const ChatBot: React.FC = () => {
         parsedResult = { result: parsedResult };
       }
     }
-    
-     const venueIds: string[] = parsedResult.venue_ids 
 
+    // Now we should have a parsed object with result + venue_ids
+    contentText = parsedResult.result || "I found some great venues for you!";
+    const venueIds: string[] = parsedResult.venue_ids || [];
 
+    if (venueIds.length > 0) {
+      const quoted = venueIds.map((id) => `"${id}"`).join(',');
+      const venuesUrl = `${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`;
 
-    // If there are venue_ids, fetch their details from Supabase
-    if (parsedResult.venue_ids && parsedResult.venue_ids.length > 0) {
-      const venuesResponse = await fetch(`${supabaseUrl}/rest/v1/venues?id=in.(${responseData.venue_ids.join(',')})`, {
+      console.log('Fetching venues from Supabase REST:', venuesUrl);
+      const venuesResponse = await fetch(venuesUrl, {
         headers: {
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${supabaseAnonKey}`,
           'Content-Type': 'application/json',
         },
       });
 
-      if (!venuesResponse.ok) {
-        throw new Error(`Failed to fetch venues: ${venuesResponse.status}`);
+      if (venuesResponse.ok) {
+        const venuesData = await venuesResponse.json();
+        console.log('Fetched venues:', venuesData);
+        venueRecommendations = venuesData.map(transformVenue);
+      } else {
+        console.warn('Failed to fetch venues:', venuesResponse.status);
       }
-
-      const venuesData = await venuesResponse.json();
-      console.log('Fetched venues from Supabase:', venuesData);
-
-      venueRecommendations = venuesData.map(transformVenue);
     }
 
   } catch (error) {
     console.error('Error calling Smythos API via proxy:', error);
-    response = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
+    contentText = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
     venueRecommendations = [];
   }
 
   return {
     id: Date.now().toString(),
     type: 'bot',
-    content: response,
+    content: contentText,
     timestamp: new Date(),
     venueRecommendations,
   };
