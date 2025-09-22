@@ -116,17 +116,12 @@ Feel free to include as much detail as you can — the more I know, the better I
 
   const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
     let contentText = '';
-    let structuredRecommendations: Array<{ explanation: string; venue: Venue }> = [];
+    let venueRecommendations: Venue[] = [];
 
     try {
-      console.log('Calling Smythos API via proxy with requirements:', userMessage);
-
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Supabase configuration not found');
-      }
       const history = messages.map(m => ({
         role: m.type === 'user' ? 'user' : 'assistant',
         content: m.content,
@@ -136,55 +131,42 @@ Feel free to include as much detail as you can — the more I know, the better I
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          Authorization: `Bearer ${supabaseAnonKey}`,
         },
         body: JSON.stringify({ requirements: userMessage, history }),
       });
 
-      if (!apiResponse.ok) {
-        throw new Error(`Proxy API error: ${apiResponse.status}`);
-      }
+      if (!apiResponse.ok) throw new Error(`Proxy API error: ${apiResponse.status}`);
 
-      let responseData: any = null;
+      let responseData: any;
       try {
         responseData = await apiResponse.json();
-      } catch (err) {
-        console.warn('Proxy returned non-JSON top-level response:', err);
-        responseData = null;
+      } catch {
+        responseData = { result: await apiResponse.text() };
       }
 
-      console.log('proxy responseData:', responseData);
+      // Extract text
+      contentText = responseData?.result ?? responseData?.response ?? 'I found some great venues for you!';
 
-      const extractRecommendations = (venuesObj: any) => {
-        const venuesArray = Object.values(venuesObj);
-        return venuesArray
-          .map((v: any) => {
-            if (!v.id) return null;
-            return {
-              explanation: v.response || 'Recommended venue',
-              venue: transformVenue(v),
-            };
-          })
-          .filter(Boolean);
-      };
+      // Extract venue IDs
+      const venueIds: string[] = Array.isArray(responseData?.venue_ids) ? responseData.venue_ids : [];
 
-      if (responseData?.response?.venues) {
-        structuredRecommendations = extractRecommendations(responseData.response.venues);
-      } else if (responseData?.Output?.venues) {
-        structuredRecommendations = extractRecommendations(responseData.Output.venues);
-      }
-
-      if (structuredRecommendations.length > 0) {
-        contentText = 'Here are some great venue recommendations for you:';
-      } else {
-        contentText =
-          responseData?.response || "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
+      if (venueIds.length > 0) {
+        const quoted = venueIds.map(id => `"${id}"`).join(',');
+        const venuesRes = await fetch(`${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`, {
+          headers: {
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+        });
+        const venuesData = await venuesRes.json();
+        venueRecommendations = venuesData.map(transformVenue);
       }
     } catch (error) {
-      console.error('Error calling Smythos API via proxy:', error);
+      console.error('Error calling Smythos API:', error);
       contentText =
         "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
-      structuredRecommendations = [];
+      venueRecommendations = [];
     }
 
     return {
@@ -192,7 +174,7 @@ Feel free to include as much detail as you can — the more I know, the better I
       type: 'bot',
       content: contentText,
       timestamp: new Date(),
-      structuredRecommendations,
+      venueRecommendations,
     };
   };
 
@@ -227,6 +209,7 @@ Feel free to include as much detail as you can — the more I know, the better I
 
   return (
     <div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
+      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="relative">
@@ -238,7 +221,6 @@ Feel free to include as much detail as you can — the more I know, the better I
             <p className="text-blue-100 text-sm">Find your perfect event space</p>
           </div>
         </div>
-
         <button
           onClick={handleClearHistory}
           className="flex items-center space-x-1 text-sm bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg transition"
@@ -247,50 +229,38 @@ Feel free to include as much detail as you can — the more I know, the better I
         </button>
       </div>
 
+      {/* Chat messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map(message => (
           <div
             key={message.id}
             className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`flex items-start space-x-2 max-w-3xl ${
-                message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-              }`}
-            >
+            <div className={`flex items-start space-x-2 max-w-3xl ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
               <div
                 className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                   message.type === 'user' ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               >
-                {message.type === 'user' ? (
-                  <User className="h-4 w-4 text-white" />
-                ) : (
-                  <Bot className="h-4 w-4 text-gray-600" />
-                )}
+                {message.type === 'user' ? <User className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-gray-600" />}
               </div>
               <div>
-                <div
-                  className={`rounded-xl px-4 py-2 ${
-                    message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
+                <div className={`rounded-xl px-4 py-2 ${message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
                   <div className="text-sm whitespace-pre-line">{message.content}</div>
                 </div>
 
-                {message.structuredRecommendations && message.structuredRecommendations.length > 0 && (
-                  <div className="mt-4 space-y-6">
-                    {message.structuredRecommendations.map((rec, index) => (
-                      <div key={`${rec.venue.id}-${index}`} className="space-y-3">
-                        <div className="bg-blue-50 rounded-lg px-4 py-3 border-l-4 border-blue-400">
-                          <div className="text-sm text-gray-800 whitespace-pre-line">{rec.explanation}</div>
+                {message.venueRecommendations && message.venueRecommendations.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-sm text-gray-600 mb-3 font-medium">
+                      Recommended Venues ({message.venueRecommendations.length})
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
+                      {message.venueRecommendations.map(venue => (
+                        <div key={venue.id} className="transform scale-90 origin-top-left">
+                          <VenueCard venue={venue} />
                         </div>
-
-                        <div className="transform scale-90 origin-top-left max-w-md">
-                          <VenueCard venue={rec.venue} />
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -317,6 +287,7 @@ Feel free to include as much detail as you can — the more I know, the better I
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Input */}
       <div className="p-4 border-t border-gray-200">
         <div className="flex space-x-2">
           <input
