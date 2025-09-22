@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Users, Star, MessageSquare, Sparkles } from 'lucide-react';
+import { Search, MessageSquare, Sparkles } from 'lucide-react';
 import { getFeaturedVenues } from '../utils/venues';
 import VenueCard from '../components/VenueCard';
 import { useState, useEffect } from 'react';
@@ -27,27 +27,30 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 flex flex-col">
       {/* Hero Section */}
-      <section className="relative bg-cover bg-center text-white"
-  style={{
-    backgroundImage: `url(${backgroundImage})`,
-  }}
->
-  {/* Overlay for darkening the image */}
-  <div className="absolute inset-0 bg-black/50"></div>
-        
+      <section
+        className="relative bg-cover bg-center text-white"
+        style={{
+          backgroundImage: `url(${backgroundImage})`,
+        }}
+      >
+        <div className="absolute inset-0 bg-black/50"></div>
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
               Find Your Perfect
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500"> Event Venue</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
+                {' '}
+                Event Venue
+              </span>
             </h1>
             <p className="text-xl md:text-2xl text-blue-100 mb-12 leading-relaxed">
               Discover amazing spaces for weddings, corporate events, parties, and more. 
               Let our AI assistant help you find the ideal venue for your special occasion.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 to="/chat"
@@ -69,9 +72,8 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-
       {/* Featured Venues */}
-      <section className="py-16">
+      <section className="py-16 flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -81,7 +83,7 @@ const Home: React.FC = () => {
               Hand-picked premium venues that offer exceptional experiences for your special events
             </p>
           </div>
-          
+
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[...Array(3)].map((_, i) => (
@@ -102,7 +104,7 @@ const Home: React.FC = () => {
               ))}
             </div>
           )}
-          
+
           <div className="text-center mt-12">
             <Link
               to="/venues"
@@ -126,7 +128,7 @@ const Home: React.FC = () => {
               Find the perfect space for any occasion
             </p>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
               { name: 'Weddings', category: 'wedding', image: 'https://images.pexels.com/photos/1395967/pexels-photo-1395967.jpeg' },
@@ -151,33 +153,6 @@ const Home: React.FC = () => {
                 </div>
               </Link>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Statistics */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold mb-2">500+</div>
-              <div className="text-blue-100">Premium Venues</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">50k+</div>
-              <div className="text-blue-100">Happy Customers</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">4.8</div>
-              <div className="text-blue-100 flex items-center justify-center">
-                <Star className="h-5 w-5 fill-current mr-1" />
-                Average Rating
-              </div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">24/7</div>
-              <div className="text-blue-100">AI Support</div>
-            </div>
           </div>
         </div>
       </section>
