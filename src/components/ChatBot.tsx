@@ -39,39 +39,22 @@ const ChatBot: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const saved = localStorage.getItem('chatMessages');
-      if (!saved)
-        return [
-          {
-            id: '1',
-            type: 'bot',
-            content:
-              "Hi! I'm your AI venue assistant. I can help you find the perfect event space. Tell me about your event - what type of event are you planning, how many guests, your budget, and preferred location?",
-            timestamp: new Date(),
-          },
-        ];
-
+      if (!saved) return [{
+        id: '1',
+        type: 'bot',
+        content: "Hi! I'm your AI venue assistant. Tell me about your event — type, guests, budget, location, etc.",
+        timestamp: new Date(),
+      }];
       const parsed = JSON.parse(saved);
-      return parsed.map((m: any) => ({
-        ...m,
-        timestamp: new Date(m.timestamp),
-      }));
+      return parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
     } catch (e) {
       console.error('Failed to load chat history:', e);
-      return [
-        {
-          id: '1',
-          type: 'bot',
-          content: `Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
-To get started, please tell me:
-- What type of event you're planning (wedding, party, corporate event, etc.)
-- The location or city you'd like the venue in
-- How many guests you expect
-- Your budget (hourly or daily)
-- Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
-Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!`,
-          timestamp: new Date(),
-        },
-      ];
+      return [{
+        id: '1',
+        type: 'bot',
+        content: "Hi! I'm your AI venue assistant. Tell me about your event — type, guests, budget, location, etc.",
+        timestamp: new Date(),
+      }];
     }
   });
 
@@ -81,21 +64,12 @@ Feel free to include as much detail as you can — the more I know, the better I
 
   const handleClearHistory = () => {
     localStorage.removeItem('chatMessages');
-    setMessages([
-      {
-        id: '1',
-        type: 'bot',
-        content: `Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
-To get started, please tell me:
-- What type of event you're planning (wedding, party, corporate event, etc.)
-- The location or city you'd like the venue in
-- How many guests you expect
-- Your budget (hourly or daily)
-- Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
-Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!`,
-        timestamp: new Date(),
-      },
-    ]);
+    setMessages([{
+      id: '1',
+      type: 'bot',
+      content: "Hi! I'm your AI venue assistant. Tell me about your event — type, guests, budget, location, etc.",
+      timestamp: new Date(),
+    }]);
   };
 
   useEffect(() => {
@@ -110,18 +84,16 @@ Feel free to include as much detail as you can — the more I know, the better I
     scrollToBottom();
   }, [messages, isTyping]);
 
-  // --- Generate bot response ---
   const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
     let contentText = '';
     let venueRecommendations: Venue[] = [];
+    let parsedPayload: any = null;
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Supabase configuration not found');
-      }
+      if (!supabaseUrl || !supabaseAnonKey) throw new Error('Supabase config missing');
 
       const history = messages.map(m => ({
         role: m.type === 'user' ? 'user' : 'assistant',
@@ -132,40 +104,38 @@ Feel free to include as much detail as you can — the more I know, the better I
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
         },
         body: JSON.stringify({ requirements: userMessage, history }),
       });
 
       if (!apiResponse.ok) throw new Error(`Proxy API error: ${apiResponse.status}`);
 
-      let responseData: any = await apiResponse.json();
+      const responseData = await apiResponse.json();
+      console.log('proxy responseData:', responseData);
 
-      // Normalize the bot content
-      contentText = ''
-      
-     if (parsedPayload) {
-  if (typeof parsedPayload.result === 'string') {
-    contentText = parsedPayload.result;
-  } else if (typeof parsedPayload.text === 'string') {
-    contentText = parsedPayload.text;
-  } else if (typeof parsedPayload.message === 'string') {
-    contentText = parsedPayload.message;
-  } else {
-    contentText = "I found some great venues for you!"; // fallback
-  }
-}
+      parsedPayload = responseData.response ?? responseData.result ?? responseData;
 
+      if (typeof parsedPayload === 'string') {
+        try {
+          parsedPayload = JSON.parse(parsedPayload);
+        } catch {
+          parsedPayload = { result: parsedPayload };
+        }
+      }
 
-      // --- Handle venue IDs ---
-      let venueIds: string[] = [];
-      if (Array.isArray(responseData?.venue_ids)) venueIds = responseData.venue_ids;
-      else if (Array.isArray(responseData?.venueIds)) venueIds = responseData.venueIds;
+      // Extract content text
+      contentText =
+        parsedPayload?.result ??
+        parsedPayload?.text ??
+        parsedPayload?.message ??
+        "I found some great venues for you!";
 
-      if (venueIds.length > 0) {
-        const quoted = venueIds.map(id => `"${id}"`).join(',');
+      if (Array.isArray(parsedPayload.venues) && parsedPayload.venues.length > 0) {
+        venueRecommendations = parsedPayload.venues.map(transformVenue);
+      } else if (Array.isArray(parsedPayload.venue_ids) && parsedPayload.venue_ids.length > 0) {
+        const quoted = parsedPayload.venue_ids.map((id: string) => `"${id}"`).join(',');
         const venuesUrl = `${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`;
-
         try {
           const venuesResponse = await fetch(venuesUrl, {
             headers: {
@@ -175,21 +145,17 @@ Feel free to include as much detail as you can — the more I know, the better I
               Accept: 'application/json',
             },
           });
-
           if (venuesResponse.ok) {
             const venuesData = await venuesResponse.json();
             venueRecommendations = venuesData.map(transformVenue);
-          } else {
-            console.warn('Supabase venues fetch returned non-ok status:', venuesResponse.status);
           }
         } catch (err) {
-          console.error('Failed to fetch venue rows from Supabase:', err);
+          console.error('Failed to fetch venues by ID:', err);
         }
       }
-    } catch (err) {
-      console.error('Error generating bot response:', err);
-      contentText =
-        "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again later.";
+    } catch (error) {
+      console.error('Error generating bot response:', error);
+      contentText = "I'm having trouble connecting to the venue service. Please try again later.";
     }
 
     return {
@@ -220,7 +186,7 @@ Feel free to include as much detail as you can — the more I know, the better I
         setMessages(prev => [...prev, botResponse]);
         setIsTyping(false);
       });
-    }, 1500);
+    }, 500);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -232,7 +198,6 @@ Feel free to include as much detail as you can — the more I know, the better I
 
   return (
     <div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="relative">
@@ -254,40 +219,15 @@ Feel free to include as much detail as you can — the more I know, the better I
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map(message => (
-          <div
-            key={message.id}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`flex items-start space-x-2 max-w-3xl ${
-                message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-              }`}
-            >
-              <div
-                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                  message.type === 'user' ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
-              >
-                {message.type === 'user' ? (
-                  <User className="h-4 w-4 text-white" />
-                ) : (
-                  <Bot className="h-4 w-4 text-gray-600" />
-                )}
+          <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`flex items-start space-x-2 max-w-3xl ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${message.type === 'user' ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                {message.type === 'user' ? <User className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-gray-600" />}
               </div>
               <div>
-                <div
-                  className={`rounded-xl px-4 py-2 ${
-                    message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  <div className="text-sm whitespace-pre-line">
-                    {typeof message.content === 'string'
-                      ? message.content
-                      : JSON.stringify(message.content)}
-                  </div>
+                <div className={`rounded-xl px-4 py-2 ${message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
+                  <div className="text-sm whitespace-pre-line">{message.content}</div>
                 </div>
-
-                {/* Venue Recommendations */}
                 {message.venueRecommendations && message.venueRecommendations.length > 0 && (
                   <div className="mt-4">
                     <div className="text-sm text-gray-600 mb-3 font-medium">
@@ -316,14 +256,8 @@ Feel free to include as much detail as you can — the more I know, the better I
               <div className="bg-gray-100 rounded-xl px-4 py-2">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-                    style={{ animationDelay: '0.2s' }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-                    style={{ animationDelay: '0.4s' }}
-                  ></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               </div>
             </div>
