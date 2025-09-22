@@ -119,13 +119,14 @@ Feel free to include as much detail as you can — the more I know, the better I
     let structuredRecommendations: Array<{ explanation: string; venue: Venue }> = [];
 
     try {
+      console.log('Calling Smythos API via proxy with requirements:', userMessage);
+
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       if (!supabaseUrl || !supabaseAnonKey) {
         throw new Error('Supabase configuration not found');
       }
-
       const history = messages.map(m => ({
         role: m.type === 'user' ? 'user' : 'assistant',
         content: m.content,
@@ -135,7 +136,7 @@ Feel free to include as much detail as you can — the more I know, the better I
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${supabaseAnonKey}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
         },
         body: JSON.stringify({ requirements: userMessage, history }),
       });
@@ -147,31 +148,40 @@ Feel free to include as much detail as you can — the more I know, the better I
       let responseData: any = null;
       try {
         responseData = await apiResponse.json();
-      } catch {
+      } catch (err) {
+        console.warn('Proxy returned non-JSON top-level response:', err);
         responseData = null;
       }
 
-      // Fix: normalize both response formats to an array
-      let venuesArray: any[] = [];
+      console.log('proxy responseData:', responseData);
+
+      const extractRecommendations = (venuesObj: any) => {
+        const venuesArray = Object.values(venuesObj);
+        return venuesArray
+          .map((v: any) => {
+            if (!v.id) return null;
+            return {
+              explanation: v.response || 'Recommended venue',
+              venue: transformVenue(v),
+            };
+          })
+          .filter(Boolean);
+      };
+
       if (responseData?.response?.venues) {
-        venuesArray = Object.values(responseData.response.venues);
+        structuredRecommendations = extractRecommendations(responseData.response.venues);
       } else if (responseData?.Output?.venues) {
-        venuesArray = Object.values(responseData.Output.venues);
+        structuredRecommendations = extractRecommendations(responseData.Output.venues);
       }
 
-      structuredRecommendations = venuesArray
-        .map(v => {
-          if (!v.id) return null;
-          return { explanation: v.response, venue: { id: v.id } as Venue };
-        })
-        .filter(Boolean);
-
-      contentText =
-        structuredRecommendations.length > 0
-          ? 'Here are some great venue recommendations for you:'
-          : "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
+      if (structuredRecommendations.length > 0) {
+        contentText = 'Here are some great venue recommendations for you:';
+      } else {
+        contentText =
+          responseData?.response || "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
+      }
     } catch (error) {
-      console.error('Error calling Smythos API:', error);
+      console.error('Error calling Smythos API via proxy:', error);
       contentText =
         "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
       structuredRecommendations = [];
@@ -217,7 +227,6 @@ Feel free to include as much detail as you can — the more I know, the better I
 
   return (
     <div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="relative">
@@ -269,23 +278,21 @@ Feel free to include as much detail as you can — the more I know, the better I
                   <div className="text-sm whitespace-pre-line">{message.content}</div>
                 </div>
 
-                {message.structuredRecommendations &&
-                  message.structuredRecommendations.length > 0 && (
-                    <div className="mt-4 space-y-6">
-                      {message.structuredRecommendations.map((rec, idx) => (
-                        <div key={`${rec.venue.id}-${idx}`} className="space-y-3">
-                          <div className="bg-blue-50 rounded-lg px-4 py-3 border-l-4 border-blue-400">
-                            <div className="text-sm text-gray-800 whitespace-pre-line">
-                              {rec.explanation}
-                            </div>
-                          </div>
-                          <div className="transform scale-90 origin-top-left max-w-md">
-                            <VenueCard venue={rec.venue} />
-                          </div>
+                {message.structuredRecommendations && message.structuredRecommendations.length > 0 && (
+                  <div className="mt-4 space-y-6">
+                    {message.structuredRecommendations.map((rec, index) => (
+                      <div key={`${rec.venue.id}-${index}`} className="space-y-3">
+                        <div className="bg-blue-50 rounded-lg px-4 py-3 border-l-4 border-blue-400">
+                          <div className="text-sm text-gray-800 whitespace-pre-line">{rec.explanation}</div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+
+                        <div className="transform scale-90 origin-top-left max-w-md">
+                          <VenueCard venue={rec.venue} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -300,14 +307,8 @@ Feel free to include as much detail as you can — the more I know, the better I
               <div className="bg-gray-100 rounded-xl px-4 py-2">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-                    style={{ animationDelay: '0.2s' }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-                    style={{ animationDelay: '0.4s' }}
-                  ></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               </div>
             </div>
@@ -335,8 +336,7 @@ Feel free to include as much detail as you can — the more I know, the better I
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          Try asking about wedding venues, corporate spaces, outdoor locations, or your specific
-          requirements!
+          Try asking about wedding venues, corporate spaces, outdoor locations, or your specific requirements!
         </p>
       </div>
     </div>
