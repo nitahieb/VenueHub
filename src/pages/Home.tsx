@@ -5,7 +5,7 @@ import { getFeaturedVenues } from '../utils/venues';
 import VenueCard from '../components/VenueCard';
 import { useState, useEffect } from 'react';
 import { Venue } from '../types/venue';
-import backgroundImage from '../images/moroccan-flower-dark.png'
+import backgroundImage from '../images/event1'
 
 const Home: React.FC = () => {
   const [featuredVenues, setFeaturedVenues] = useState<Venue[]>([]);
