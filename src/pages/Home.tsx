@@ -27,7 +27,7 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <section className="relative bg-cover bg-center text-white"
   style={{
