@@ -167,6 +167,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
       console.log('Processing new API format with structured venues');
       
       const structuredVenues = responseData.response.venues;
+      console.log("structured venues", structuredVenues)
       const venueIds = structuredVenues.map((v: any) => v.id);
       
       console.log('Extracted venue IDs:', venueIds);
