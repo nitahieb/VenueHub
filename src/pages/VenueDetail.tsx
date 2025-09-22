@@ -204,7 +204,7 @@ const VenueDetail: React.FC = () => {
                 <div className="flex items-center bg-amber-50 px-3 py-1 rounded-full">
                   <Star className="h-5 w-5 text-amber-400 fill-current mr-1" />
                   <span className="font-semibold text-amber-700">{venue.rating}</span>
-                  <span className="text-gray-500 ml-1">({venue.reviews} reviews)</span>
+                  <span className="text-gray-500 ml-1">({venue.reviews} ratings)</span>
                 </div>
               </div>
 
@@ -260,7 +260,7 @@ const VenueDetail: React.FC = () => {
 
             {/* Reviews Section */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Ratings</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews</h2>
               <div className="space-y-6">
                 {/* Overall Rating */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border">
