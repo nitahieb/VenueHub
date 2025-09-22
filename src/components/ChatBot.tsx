@@ -35,72 +35,74 @@ const transformVenue = (dbVenue: any): Venue => ({
   owner_id: dbVenue.owner_id,
 });
 
-
 const ChatBot: React.FC = () => {
-const [messages, setMessages] = useState<ChatMessage[]>(() => {
-  try {
-    const saved = localStorage.getItem('chatMessages');
-    if (!saved) return [
-      {
-        id: '1',
-        type: 'bot',
-        content: "Hi! I'm your AI venue assistant. I can help you find the perfect event space. Tell me about your event - what type of event are you planning, how many guests, your budget, and preferred location?",
-        timestamp: new Date(),
-      },
-    ];
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem('chatMessages');
+      if (!saved)
+        return [
+          {
+            id: '1',
+            type: 'bot',
+            content:
+              "Hi! I'm your AI venue assistant. I can help you find the perfect event space. Tell me about your event - what type of event are you planning, how many guests, your budget, and preferred location?",
+            timestamp: new Date(),
+          },
+        ];
 
-    const parsed = JSON.parse(saved);
-    // Convert timestamp strings back into Date objects
-    return parsed.map((m: any) => ({
-      ...m,
-      timestamp: new Date(m.timestamp),
-    }));
-  } catch (e) {
-    console.error("Failed to load chat history:", e);
-    return [
-      {
-        id: '1',
-        type: 'bot',
-        content: `Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
+      const parsed = JSON.parse(saved);
+      return parsed.map((m: any) => ({
+        ...m,
+        timestamp: new Date(m.timestamp),
+      }));
+    } catch (e) {
+      console.error('Failed to load chat history:', e);
+      return [
+        {
+          id: '1',
+          type: 'bot',
+          content: `Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
 
-                    To get started, please tell me:
-                    - What type of event you're planning (wedding, party, corporate event, etc.)
-                    - The location or city you'd like the venue in
-                    - How many guests you expect
-                    - Your budget (hourly or daily)
-                    - Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
-                    
-                    Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!`,
-        timestamp: new Date(),
-      },
-    ];
-  }
-});
+To get started, please tell me:
+- What type of event you're planning (wedding, party, corporate event, etc.)
+- The location or city you'd like the venue in
+- How many guests you expect
+- Your budget (hourly or daily)
+- Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
+
+Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!`,
+          timestamp: new Date(),
+        },
+      ];
+    }
+  });
 
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleClearHistory = () => {
-  localStorage.removeItem('chatMessages');
-  setMessages([{
-    id: '1',
-    type: 'bot',
-    content: `Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
+    localStorage.removeItem('chatMessages');
+    setMessages([
+      {
+        id: '1',
+        type: 'bot',
+        content: `Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
 
-                    To get started, please tell me:
-                    - What type of event you're planning (wedding, party, corporate event, etc.)
-                    - The location or city you'd like the venue in
-                    - How many guests you expect
-                    - Your budget (hourly or daily)
-                    - Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
-                    
-                    Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!`,
-    timestamp: new Date(),
-  }]);
-};
+To get started, please tell me:
+- What type of event you're planning (wedding, party, corporate event, etc.)
+- The location or city you'd like the venue in
+- How many guests you expect
+- Your budget (hourly or daily)
+- Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
 
-  // ✅ Persist to localStorage whenever messages change
+Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!`,
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
+  // Persist messages to localStorage
   useEffect(() => {
     localStorage.setItem('chatMessages', JSON.stringify(messages));
   }, [messages]);
