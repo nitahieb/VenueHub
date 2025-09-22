@@ -177,59 +177,30 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
         // Extract venue IDs from the Reply array
         const venueIds = parsedResponse.Reply.map((item: any) => item.id).filter(Boolean);
         
-        if (venueIds.length > 0) {
-          // Fetch venue details from Supabase
-          const quoted = venueIds.map((id: string) => `"${String(id).replace(/"/g, '')}"`).join(',');
-          const venuesUrl = `${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`;
-          console.log('Fetching venues from Supabase REST:', venuesUrl);
+        if (responseData?.Output?.venues && Array.isArray(responseData.Output.venues)) {
+  const venuesArray = responseData.Output.venues;
 
-          try {
-            const venuesResponse = await fetch(venuesUrl, {
-              headers: {
-                apikey: supabaseAnonKey,
-                Authorization: `Bearer ${supabaseAnonKey}`,
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-              },
-            });
+  structuredRecommendations = venuesArray
+    .map((item: any) => {
+      if (!item.id) return null;
+      return {
+        explanation: item.response,
+        venue: { id: item.id } as Venue, // optional: fetch full venue details if you want
+      };
+    })
+    .filter(Boolean);
 
-            if (venuesResponse.ok) {
-              const venuesData = await venuesResponse.json();
-              console.log('Venues data from Supabase:', venuesData);
-              
-              // Create a map of venue ID to venue data for quick lookup
-              const venueMap = new Map();
-              venuesData.forEach((venue: any) => {
-                venueMap.set(venue.id, transformVenue(venue));
-              });
-
-              // Build structured recommendations array
-              structuredRecommendations = parsedResponse.Reply
-                .map((item: any) => {
-                  const venue = venueMap.get(item.id);
-                  if (venue) {
-                    return {
-                      explanation: item.response,
-                      venue: venue
-                    };
-                  }
-                  return null;
-                })
-                .filter(Boolean);
-
-              console.log('Structured recommendations:', structuredRecommendations);
-              
-              // Set a general content text
-              contentText = "Here are some great venue recommendations for you:";
-            } else {
-              console.warn('Failed to fetch venues from Supabase:', venuesResponse.status);
-              contentText = "I found some venues but couldn't load the details. Please try again.";
-            }
-          } catch (err) {
-            console.error('Error fetching venues:', err);
-            contentText = "I found some venues but couldn't load the details. Please try again.";
-          }
-        } else {
+  if (structuredRecommendations.length > 0) {
+    contentText = "Here are some great venue recommendations for you:";
+  } else {
+    contentText =
+      "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
+  }
+} else {
+  contentText =
+    responseData?.response || "I'm sorry, I didn't receive a proper response. Please try again.";
+}
+ else {
           contentText = "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
         }
       } else {
