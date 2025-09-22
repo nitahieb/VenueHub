@@ -364,7 +364,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
         <div key={venue.id} className="transform scale-90 origin-top-left">
           <VenueCard venue={venue} />
         </div>
-      ))}
+      )).reverse()}
     </div>
   </div>
 )}
