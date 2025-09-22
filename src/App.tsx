@@ -27,8 +27,9 @@ function App() {
           <Route path="/semantic-search" element={<SemanticSearch />} />
         </Routes>
       </div>
+      <Footer />
     </Router>
-    <Footer />
+    
   );
 }
 
