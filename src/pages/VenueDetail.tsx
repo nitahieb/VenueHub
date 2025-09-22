@@ -260,7 +260,7 @@ const VenueDetail: React.FC = () => {
 
             {/* Reviews Section */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Ratings</h2>
               <div className="space-y-6">
                 {/* Overall Rating */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border">
