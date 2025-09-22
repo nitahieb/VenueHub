@@ -9,6 +9,7 @@ import ListVenue from './pages/ListVenue';
 import UserVenues from './pages/UserVenues';
 import Admin from './pages/Admin';
 import SemanticSearch from './pages/SemanticSearch';
+import Footer from './components/Footer'
 
 function App() {
   return (
@@ -26,8 +27,8 @@ function App() {
           <Route path="/semantic-search" element={<SemanticSearch />} />
         </Routes>
       </div>
-      <Footer />
     </Router>
+    <Footer />
   );
 }
 
