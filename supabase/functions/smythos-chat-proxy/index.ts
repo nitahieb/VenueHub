@@ -14,7 +14,7 @@ interface SmythosChatRequest {
 }
 
 interface SmythosApiResponse {
-  result: string;
+  result?: string;
   venue_ids?: string[];
   Output?: {
     venues?: {
