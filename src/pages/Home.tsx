@@ -59,7 +59,7 @@ const Home: React.FC = () => {
               </Link>
               <Link
                 to="/venues"
-                className="bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2"
+                className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold transition-colors duration-200"
               >
                 <Search className="h-5 w-5" />
                 <span>Browse All Venues</span>
