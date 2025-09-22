@@ -28,8 +28,14 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-white">
-        <div className="absolute inset-0 bg-black opacity-20"></div>
+      className="relative bg-cover bg-center text-white"
+  style={{
+    backgroundImage: `url('https://images.pexels.com/photos/1679825/pexels-photo-1679825.jpeg')`,
+  }}
+>
+  {/* Overlay for darkening the image */}
+  <div className="absolute inset-0 bg-black/50"></div>
+        
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
