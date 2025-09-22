@@ -106,18 +106,19 @@ const [messages, setMessages] = useState<ChatMessage[]>(() => {
   }, [messages]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (scrollableRef.current) {
+    scrollableRef.current.scrollTop = scrollableRef.current.scrollHeight;
+  }
   };
 
-  useEffect(() => {
+useEffect(() => {
   const lastMessage = messages[messages.length - 1];
   if (!lastMessage) return;
 
-  // Only scroll if the last message is from the user
   if (lastMessage.type === 'user') {
     scrollToBottom();
   }
-  }, [messages]);
+}, [messages]);
 
 const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
   let contentText = '';
@@ -281,6 +282,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
       handleSendMessage();
     }
   };
+  const scrollableRef = useRef<HTMLDivElement>(null);
 
   return (
 <div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
@@ -308,7 +310,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
   </div>
       
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollableRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`flex items-start space-x-2 max-w-3xl ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
