@@ -61,7 +61,7 @@ const Home: React.FC = () => {
                 to="/venues"
                 className="inline-flex items-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                <Search className="h-5 w-5" />
+                <Search className="ml-2 h-5 w-5" />
                 <span>Browse All Venues</span>
               </Link>
             </div>
