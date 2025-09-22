@@ -62,14 +62,12 @@ const ChatBot: React.FC = () => {
           id: '1',
           type: 'bot',
           content: `Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
-
 To get started, please tell me:
 - What type of event you're planning (wedding, party, corporate event, etc.)
 - The location or city you'd like the venue in
 - How many guests you expect
 - Your budget (hourly or daily)
 - Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
-
 Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!`,
           timestamp: new Date(),
         },
@@ -88,14 +86,12 @@ Feel free to include as much detail as you can — the more I know, the better I
         id: '1',
         type: 'bot',
         content: `Hi! I'm your AI venue assistant. I can help you find the perfect event space. 
-
 To get started, please tell me:
 - What type of event you're planning (wedding, party, corporate event, etc.)
 - The location or city you'd like the venue in
 - How many guests you expect
 - Your budget (hourly or daily)
 - Any special requests or amenities you need (outdoor space, AV equipment, catering, etc.)
-
 Feel free to include as much detail as you can — the more I know, the better I can recommend venues for you!`,
         timestamp: new Date(),
       },
@@ -114,6 +110,7 @@ Feel free to include as much detail as you can — the more I know, the better I
     scrollToBottom();
   }, [messages, isTyping]);
 
+  // --- Generate bot response ---
   const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
     let contentText = '';
     let venueRecommendations: Venue[] = [];
@@ -121,6 +118,10 @@ Feel free to include as much detail as you can — the more I know, the better I
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase configuration not found');
+      }
 
       const history = messages.map(m => ({
         role: m.type === 'user' ? 'user' : 'assistant',
@@ -138,35 +139,47 @@ Feel free to include as much detail as you can — the more I know, the better I
 
       if (!apiResponse.ok) throw new Error(`Proxy API error: ${apiResponse.status}`);
 
-      let responseData: any;
-      try {
-        responseData = await apiResponse.json();
-      } catch {
-        responseData = { result: await apiResponse.text() };
-      }
+      let responseData: any = await apiResponse.json();
 
-      // Extract text
-      contentText = responseData?.result ?? responseData?.response ?? 'I found some great venues for you!';
+      // Normalize the bot content
+      contentText =
+        typeof responseData.result === 'string'
+          ? responseData.result
+          : responseData.result?.message ?? 'I found some great venues for you!';
 
-      // Extract venue IDs
-      const venueIds: string[] = Array.isArray(responseData?.venue_ids) ? responseData.venue_ids : [];
+      // --- Handle venue IDs ---
+      let venueIds: string[] = [];
+      if (Array.isArray(responseData?.venue_ids)) venueIds = responseData.venue_ids;
+      else if (Array.isArray(responseData?.venueIds)) venueIds = responseData.venueIds;
 
       if (venueIds.length > 0) {
         const quoted = venueIds.map(id => `"${id}"`).join(',');
-        const venuesRes = await fetch(`${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`, {
-          headers: {
-            apikey: supabaseAnonKey,
-            Authorization: `Bearer ${supabaseAnonKey}`,
-          },
-        });
-        const venuesData = await venuesRes.json();
-        venueRecommendations = venuesData.map(transformVenue);
+        const venuesUrl = `${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`;
+
+        try {
+          const venuesResponse = await fetch(venuesUrl, {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+          });
+
+          if (venuesResponse.ok) {
+            const venuesData = await venuesResponse.json();
+            venueRecommendations = venuesData.map(transformVenue);
+          } else {
+            console.warn('Supabase venues fetch returned non-ok status:', venuesResponse.status);
+          }
+        } catch (err) {
+          console.error('Failed to fetch venue rows from Supabase:', err);
+        }
       }
-    } catch (error) {
-      console.error('Error calling Smythos API:', error);
+    } catch (err) {
+      console.error('Error generating bot response:', err);
       contentText =
-        "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
-      venueRecommendations = [];
+        "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again later.";
     }
 
     return {
@@ -229,26 +242,42 @@ Feel free to include as much detail as you can — the more I know, the better I
         </button>
       </div>
 
-      {/* Chat messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map(message => (
           <div
             key={message.id}
             className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div className={`flex items-start space-x-2 max-w-3xl ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+            <div
+              className={`flex items-start space-x-2 max-w-3xl ${
+                message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+              }`}
+            >
               <div
                 className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                   message.type === 'user' ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               >
-                {message.type === 'user' ? <User className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-gray-600" />}
+                {message.type === 'user' ? (
+                  <User className="h-4 w-4 text-white" />
+                ) : (
+                  <Bot className="h-4 w-4 text-gray-600" />
+                )}
               </div>
               <div>
-                <div className={`rounded-xl px-4 py-2 ${message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                  <div className="text-sm whitespace-pre-line">{message.content}</div>
+                <div
+                  className={`rounded-xl px-4 py-2 ${
+                    message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
+                  }`}
+                >
+                  <div className="text-sm whitespace-pre-line">
+                    {typeof message.content === 'string'
+                      ? message.content
+                      : JSON.stringify(message.content)}
+                  </div>
                 </div>
 
+                {/* Venue Recommendations */}
                 {message.venueRecommendations && message.venueRecommendations.length > 0 && (
                   <div className="mt-4">
                     <div className="text-sm text-gray-600 mb-3 font-medium">
@@ -277,8 +306,14 @@ Feel free to include as much detail as you can — the more I know, the better I
               <div className="bg-gray-100 rounded-xl px-4 py-2">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  <div
+                    className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
+                    style={{ animationDelay: '0.2s' }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
+                    style={{ animationDelay: '0.4s' }}
+                  ></div>
                 </div>
               </div>
             </div>
@@ -287,7 +322,6 @@ Feel free to include as much detail as you can — the more I know, the better I
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <div className="p-4 border-t border-gray-200">
         <div className="flex space-x-2">
           <input
