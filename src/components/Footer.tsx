@@ -22,7 +22,7 @@ const Footer: React.FC = () => {
           {/* Socials */}
           <div className="flex justify-center md:justify-end space-x-4">
             <a
-              href="https://github.com/YOUR_GITHUB_USERNAME"
+              href="https://github.com/nitahieb"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors duration-200"
