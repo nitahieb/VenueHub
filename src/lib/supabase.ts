@@ -47,8 +47,8 @@ export interface Database {
           zip_code: string;
           seated_capacity: number;
           standing_capacity: number;
-          hourly_price: number;
-          daily_price: number;
+          hourly_price: number | null;
+          daily_price: number | null;
           category: string;
           amenities: string[];
           images: string[];

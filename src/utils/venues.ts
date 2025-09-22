@@ -272,7 +272,7 @@ export const generateVenueEmbeddingText = (venue: {
     getVenueTypeKeywords(venue.category, venue.name, venue.description),
     getCategoryKeywords(venue.category),
     getCapacityKeywords(venue.seated_capacity, venue.standing_capacity),
-    getPriceKeywords(venue.hourly_price, venue.daily_price),
+    getPriceKeywords(venue.hourly_price ?? 0, venue.daily_price ?? 0),
     getFeaturedKeywords(venue.featured || false),
     venue.amenities?.join(' ') || ''
   ].filter(Boolean).join(' ');

@@ -65,8 +65,8 @@ const SemanticSearch: React.FC = () => {
           standing: venue.standing_capacity,
         },
         price: {
-          hourly: venue.hourly_price / 100,
-          daily: venue.daily_price / 100,
+          hourly: (venue.hourly_price ?? 0) / 100,
+          daily: (venue.daily_price ?? 0) / 100,
         },
         amenities: venue.amenities || [],
         images: venue.images || [],
