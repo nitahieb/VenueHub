@@ -65,7 +65,7 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center text-blue-600 font-semibold">
               <DollarSign className="h-4 w-4" />
-              <span>{venue.price.hourly.toLocaleString()}/hour</span>
+              <p className="text-lg font-semibold text-gray-700">${(venue.price.daily ?? 0).toLocaleString()}</p>
             </div>
             <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
               View Details
