@@ -158,7 +158,7 @@ Feel free to include as much detail as you can — the more I know, the better I
       console.log('proxy responseData:', responseData);
 
       // Handle new structured API response format
-if (responseData?.Output?.venues && typeof responseData.Output.venues === 'object') {
+      if (responseData?.success && responseData?.Output?.venues && typeof responseData.Output.venues === 'object') {
   const venuesArray = Object.values(responseData.Output.venues);
 
         structuredRecommendations = venuesArray
@@ -167,6 +167,25 @@ if (responseData?.Output?.venues && typeof responseData.Output.venues === 'objec
             return {
               explanation: item.response,
               venue: { id: item.id } as Venue, // optional: fetch full venue details if needed
+            };
+          })
+          .filter(Boolean);
+
+        if (structuredRecommendations.length > 0) {
+          contentText = "Here are some great venue recommendations for you:";
+        } else {
+          contentText =
+            "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
+        }
+      } else if (responseData?.Output?.venues && typeof responseData.Output.venues === 'object') {
+        const venuesArray = Object.values(responseData.Output.venues);
+
+        structuredRecommendations = venuesArray
+          .map((item: any) => {
+            if (!item.id) return null;
+            return {
+              explanation: item.response,
+              venue: { id: item.id } as Venue,
             };
           })
           .filter(Boolean);
