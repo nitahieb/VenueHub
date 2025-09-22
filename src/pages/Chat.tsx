@@ -3,8 +3,9 @@ import ChatBot from '../components/ChatBot';
 
 const Chat: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Page Content */}
+      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
             AI Venue Assistant
@@ -14,7 +15,7 @@ const Chat: React.FC = () => {
             Just describe what you're looking for, and we'll provide personalized recommendations.
           </p>
         </div>
-        
+
         <ChatBot />
       </div>
     </div>
