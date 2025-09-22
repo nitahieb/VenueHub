@@ -4,7 +4,7 @@ import ChatBot from '../components/ChatBot';
 const Chat: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Content */}
+      {/* Main content grows to push footer down */}
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center mb-8">
@@ -12,20 +12,13 @@ const Chat: React.FC = () => {
               AI Venue Assistant
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Let our intelligent assistant help you find the perfect venue for your event.
+              Let our intelligent assistant help you find the perfect venue for your event. 
               Just describe what you're looking for, and we'll provide personalized recommendations.
             </p>
           </div>
+          
           <ChatBot />
         </div>
-      </div>
-
-      {/* Footer Wrapper with Same Background */}
-      <div className="bg-gray-50">
-        {/* Footer gets wrapped so it shares the same background */}
-        <footer className="bg-gray-900 text-white">
-          {/* Your footer component here */}
-        </footer>
       </div>
     </div>
   );
