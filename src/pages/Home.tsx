@@ -30,7 +30,7 @@ const Home: React.FC = () => {
       {/* Hero Section */}
       <section className="relative bg-cover bg-center text-white"
   style={{
-    backgroundImage: `url('https://images.pexels.com/photos/1679825/pexels-photo-1679825.jpeg')`,
+    backgroundImage: `./images/morocco-blue.png`,
   }}
 >
   {/* Overlay for darkening the image */}
