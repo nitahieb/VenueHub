@@ -115,7 +115,7 @@ const [messages, setMessages] = useState<ChatMessage[]>(() => {
 
 const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
   let contentText = '';
-  let venueRecommendations: Venue[] = [];
+  let structuredRecommendations: Array<{ explanation: string; venue: Venue }> = [];
 
   try {
     console.log('Calling Smythos API via proxy with requirements:', userMessage);
@@ -156,113 +156,91 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     }
     console.log('proxy responseData:', responseData);
 
-    // --- locate the payload (it may be under response, result, or be the object itself) ---
-    let payload: any = null;
+    // Handle new structured API response format
+    if (responseData && responseData.response) {
+      // Parse the response string as JSON to get the Reply array
+      let parsedResponse: any = null;
+      try {
+        parsedResponse = JSON.parse(responseData.response);
+        console.log('Parsed response:', parsedResponse);
+      } catch (err) {
+        console.warn('Failed to parse response as JSON:', err);
+        // Fallback to treating response as plain text
+        contentText = responseData.response;
+      }
 
-    if (responseData && typeof responseData === 'object') {
-      // Prefer `response` (your example), then `result`, then top-level object
-      payload = responseData.response ?? responseData.result ?? responseData;
-    } else {
-      payload = responseData;
-    }
+      if (parsedResponse && Array.isArray(parsedResponse.Reply)) {
+        console.log('Processing Reply array:', parsedResponse.Reply);
+        
+        // Extract venue IDs from the Reply array
+        const venueIds = parsedResponse.Reply.map((item: any) => item.id).filter(Boolean);
+        
+        if (venueIds.length > 0) {
+          // Fetch venue details from Supabase
+          const quoted = venueIds.map((id: string) => `"${String(id).replace(/"/g, '')}"`).join(',');
+          const venuesUrl = `${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`;
+          console.log('Fetching venues from Supabase REST:', venuesUrl);
 
-    // payload might be a string that contains JSON. parse if so.
-    let parsedPayload: any = payload;
-    if (typeof payload === 'string') {
-      const trimmed = payload.trim();
-      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-        try {
-          parsedPayload = JSON.parse(payload);
-          console.log('parsedPayload after JSON.parse(payload):', parsedPayload);
-        } catch (err) {
-          console.warn('Failed to parse payload string as JSON, using as text:', err);
-          parsedPayload = { result: payload };
+          try {
+            const venuesResponse = await fetch(venuesUrl, {
+              headers: {
+                apikey: supabaseAnonKey,
+                Authorization: `Bearer ${supabaseAnonKey}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+              },
+            });
+
+            if (venuesResponse.ok) {
+              const venuesData = await venuesResponse.json();
+              console.log('Venues data from Supabase:', venuesData);
+              
+              // Create a map of venue ID to venue data for quick lookup
+              const venueMap = new Map();
+              venuesData.forEach((venue: any) => {
+                venueMap.set(venue.id, transformVenue(venue));
+              });
+
+              // Build structured recommendations array
+              structuredRecommendations = parsedResponse.Reply
+                .map((item: any) => {
+                  const venue = venueMap.get(item.id);
+                  if (venue) {
+                    return {
+                      explanation: item.response,
+                      venue: venue
+                    };
+                  }
+                  return null;
+                })
+                .filter(Boolean);
+
+              console.log('Structured recommendations:', structuredRecommendations);
+              
+              // Set a general content text
+              contentText = "Here are some great venue recommendations for you:";
+            } else {
+              console.warn('Failed to fetch venues from Supabase:', venuesResponse.status);
+              contentText = "I found some venues but couldn't load the details. Please try again.";
+            }
+          } catch (err) {
+            console.error('Error fetching venues:', err);
+            contentText = "I found some venues but couldn't load the details. Please try again.";
+          }
+        } else {
+          contentText = "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
         }
       } else {
-        // plain text
-        parsedPayload = { result: payload };
+        // Fallback for non-structured responses
+        contentText = parsedResponse?.result || responseData.response || "I found some information for you.";
       }
-    }
-
-    // Some responses are nested: parsedPayload.result could itself be a JSON string.
-    if (parsedPayload && typeof parsedPayload.result === 'string') {
-      const maybe = parsedPayload.result.trim();
-      if (maybe.startsWith('{') || maybe.startsWith('[')) {
-        try {
-          const inner = JSON.parse(parsedPayload.result);
-          // merge inner fields into parsedPayload (inner may contain result and venue_ids)
-          parsedPayload = { ...parsedPayload, ...inner };
-          console.log('unwrapped nested parsedPayload.result JSON:', inner);
-        } catch (err) {
-          // ignore parse failure and keep original string result
-        }
-      }
-    }
-
-    console.log('final parsedPayload:', parsedPayload);
-
-    // Extract user-facing text
-    contentText =
-      parsedPayload?.result ??
-      parsedPayload?.response ??
-      parsedPayload?.text ??
-      parsedPayload?.message ??
-      'I found some great venues for you!';
-
-    // Ensure contentText is a string
-    if (typeof contentText !== 'string') {
-      contentText = String(contentText);
-    }
-
-    // If the proxy already included venue rows in responseData.venues, use them.
-    if (Array.isArray(responseData?.venues) && responseData.venues.length > 0) {
-      console.log('Using venues provided directly in responseData.venues');
-      venueRecommendations = responseData.venues.map(transformVenue);
     } else {
-      // Try to extract venue IDs from parsedPayload (defensive checks)
-      const venueIds: string[] =
-        Array.isArray(parsedPayload?.venue_ids) ? parsedPayload.venue_ids
-        : Array.isArray(parsedPayload?.venueIds) ? parsedPayload.venueIds
-        : [];
-
-      console.log('venueIds extracted:', venueIds);
-
-      if (venueIds.length > 0) {
-        // quote ids for Supabase REST filter: id=in.("id1","id2")
-        const quoted = venueIds.map(id => `"${String(id).replace(/"/g, '')}"`).join(',');
-        const venuesUrl = `${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`;
-        console.log('Fetching venues from Supabase REST:', venuesUrl);
-
-        try {
-          const venuesResponse = await fetch(venuesUrl, {
-            headers: {
-              apikey: supabaseAnonKey,
-              Authorization: `Bearer ${supabaseAnonKey}`,
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-            },
-          });
-
-          if (!venuesResponse.ok) {
-            console.warn('Supabase venues fetch returned non-ok status:', venuesResponse.status);
-          } else {
-            const venuesData = await venuesResponse.json();
-            console.log('venuesData from Supabase:', venuesData);
-            if (Array.isArray(venuesData) && venuesData.length > 0) {
-              venueRecommendations = venuesData.map(transformVenue);
-            } else {
-              console.warn('No venue rows returned for provided IDs. Check IDs exist in DB or CORS/permission issues.');
-            }
-          }
-        } catch (err) {
-          console.error('Failed to fetch venue rows from Supabase:', err);
-        }
-      }
+      contentText = "I'm sorry, I didn't receive a proper response. Please try again.";
     }
   } catch (error) {
     console.error('Error calling Smythos API via proxy:', error);
     contentText = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
-    venueRecommendations = [];
+    structuredRecommendations = [];
   }
 
   return {
@@ -270,7 +248,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     type: 'bot',
     content: contentText,
     timestamp: new Date(),
-    venueRecommendations,
+    structuredRecommendations,
   };
 };
 
@@ -354,6 +332,8 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
 }`}>
   <div className="text-sm whitespace-pre-line">{message.content}</div>
 </div>
+
+{/* Legacy venue recommendations (for backward compatibility) */}
 {message.venueRecommendations && message.venueRecommendations.length > 0 && (
   <div className="mt-4">
     <div className="text-sm text-gray-600 mb-3 font-medium">
@@ -366,6 +346,27 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
         </div>
       )).reverse()}
     </div>
+  </div>
+)}
+
+{/* New structured recommendations with interleaved explanations */}
+{message.structuredRecommendations && message.structuredRecommendations.length > 0 && (
+  <div className="mt-4 space-y-6">
+    {message.structuredRecommendations.map((recommendation, index) => (
+      <div key={`${recommendation.venue.id}-${index}`} className="space-y-3">
+        {/* Venue explanation */}
+        <div className="bg-blue-50 rounded-lg px-4 py-3 border-l-4 border-blue-400">
+          <div className="text-sm text-gray-800 whitespace-pre-line">
+            {recommendation.explanation}
+          </div>
+        </div>
+        
+        {/* Venue card */}
+        <div className="transform scale-90 origin-top-left max-w-md">
+          <VenueCard venue={recommendation.venue} />
+        </div>
+      </div>
+    ))}
   </div>
 )}
 

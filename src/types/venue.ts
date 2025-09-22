@@ -45,4 +45,8 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   venueRecommendations?: Venue[];
+  structuredRecommendations?: Array<{
+    explanation: string;
+    venue: Venue;
+  }>;
 }
