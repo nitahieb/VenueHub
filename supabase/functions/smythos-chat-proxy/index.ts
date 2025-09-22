@@ -16,6 +16,14 @@ interface SmythosChatRequest {
 interface SmythosApiResponse {
   result: string;
   venue_ids?: string[];
+  Output?: {
+    venues?: {
+      [key: string]: {
+        id: string;
+        response: string;
+      };
+    };
+  };
 }
 
 interface SmythosChatResponse {
@@ -160,13 +168,34 @@ Deno.serve(async (req: Request) => {
 
     console.log('Parsed Smythos data:', smythosData);
 
-    // Extract the result text directly - it should already be a string
-    const responseContent = smythosData.venues || "I found some venues for you!";
+    // Handle both old and new API response formats
+    let responseContent = "I found some venues for you!";
+    let venueIds: string[] = [];
+    
+    // Check for new format with Output.venues
+    if (smythosData.Output?.venues) {
+      const venuesObj = smythosData.Output.venues;
+      const venuesList = Object.values(venuesObj);
+      
+      if (venuesList.length > 0) {
+        responseContent = "Here are some great venue recommendations for you:";
+        venueIds = venuesList.map((venue: any) => venue.id).filter(Boolean);
+      }
+    }
+    // Check for old format with venue_ids
+    else if (smythosData.venue_ids && Array.isArray(smythosData.venue_ids)) {
+      venueIds = smythosData.venue_ids;
+      responseContent = smythosData.result || "I found some venues for you!";
+    }
+    // Fallback to result text
+    else if (smythosData.result) {
+      responseContent = smythosData.result;
+    }
 
     // Fetch venue details if venue IDs are provided
     let venues = [];
-    if (smythosData.venue_ids && Array.isArray(smythosData.venue_ids) && smythosData.venue_ids.length > 0) {
-      console.log('Fetching venue details for IDs:', smythosData.venue_ids);
+    if (venueIds.length > 0) {
+      console.log('Fetching venue details for IDs:', venueIds);
       
       try {
         // Initialize Supabase client
@@ -179,7 +208,7 @@ Deno.serve(async (req: Request) => {
         const { data: venueData, error: venueError } = await supabase
           .from('venues')
           .select('*')
-          .in('id', smythosData.venue_ids)
+          .in('id', venueIds)
           .eq('status', 'approved');
 
         if (venueError) {
@@ -196,7 +225,7 @@ Deno.serve(async (req: Request) => {
     // Return successful response with both text and venue data
     const response: SmythosChatResponse = {
       success: true,
-      response: responseContent,
+      response: smythosData, // Return the full parsed response for frontend processing
       venues: venues,
     };
 
