@@ -233,16 +233,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
           console.error('Failed to fetch venue details:', err);
         }
       } else{
-        if (responseData?.response?.venues) {
-            return {
-                id: Date.now().toString(),
-                type: 'bot',
-                content: responseData?.response?.venues[0].response,
-                timestamp: new Date()
-              };
-          
-          
-        }
+        
         
       }
     }
