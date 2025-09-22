@@ -142,10 +142,20 @@ Feel free to include as much detail as you can — the more I know, the better I
       let responseData: any = await apiResponse.json();
 
       // Normalize the bot content
-      contentText =
-        typeof responseData.result === 'string'
-          ? responseData.result
-          : responseData.result?.message ?? 'I found some great venues for you!';
+      contentText = ''
+      
+     if (parsedPayload) {
+  if (typeof parsedPayload.result === 'string') {
+    contentText = parsedPayload.result;
+  } else if (typeof parsedPayload.text === 'string') {
+    contentText = parsedPayload.text;
+  } else if (typeof parsedPayload.message === 'string') {
+    contentText = parsedPayload.message;
+  } else {
+    contentText = "I found some great venues for you!"; // fallback
+  }
+}
+
 
       // --- Handle venue IDs ---
       let venueIds: string[] = [];
