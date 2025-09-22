@@ -111,7 +111,7 @@ const [messages, setMessages] = useState<ChatMessage[]>(() => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [isTyping]);
 
 const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
   let contentText = '';
