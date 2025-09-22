@@ -177,6 +177,16 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
       console.log('Processing new API format with structured venues');
       
       const structuredVenues = responseData.response.venues;
+      if(structuredVenues[0].id!= null) {
+        console.log("No matches")
+            return {
+                id: Date.now().toString(),
+                type: 'bot',
+                content: responseData?.response?.venues[0].response,
+                timestamp: new Date()
+              };          
+
+      }
       console.log("structured venues", structuredVenues)
       const venueIds = structuredVenues.map((v: any) => v.id);
       
@@ -232,9 +242,6 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
         } catch (err) {
           console.error('Failed to fetch venue details:', err);
         }
-      } else{
-        
-        
       }
     }
     
