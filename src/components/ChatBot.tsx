@@ -21,8 +21,8 @@ const transformVenue = (dbVenue: any): Venue => ({
     standing: dbVenue.standing_capacity,
   },
   price: {
-    hourly: dbVenue.hourly_price / 100, // Convert from cents to dollars
-    daily: dbVenue.daily_price / 100,
+    hourly: (dbVenue.hourly_price || 0) / 100, // Convert from cents to dollars, default to 0 if null
+    daily: (dbVenue.daily_price || 0) / 100,
   },
   amenities: dbVenue.amenities || [],
   images: dbVenue.images || [],
