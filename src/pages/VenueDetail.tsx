@@ -279,7 +279,7 @@ const VenueDetail: React.FC = () => {
                     <span className="text-gray-500 ml-2">({venue.reviews} reviews)</span>
                   </div>
                   <p className="text-gray-600">
-                    Based on {venue.reviews} verified reviews from past events.
+                    Based on {venue.reviews} verified ratings from past events.
                   </p>
                 </div>
                 
