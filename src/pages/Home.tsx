@@ -29,7 +29,7 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="relative bg-cover bg-center text-white"
+      <section className="relative bg-contain bg-center text-white"
   style={{
     backgroundImage: `url(${backgroundImage})`,
   }}
