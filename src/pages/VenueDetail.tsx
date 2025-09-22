@@ -276,7 +276,7 @@ const VenueDetail: React.FC = () => {
                       ))}
                     </div>
                     <span className="text-lg font-semibold text-gray-900">{venue.rating} out of 5</span>
-                    <span className="text-gray-500 ml-2">({venue.reviews} reviews)</span>
+                    <span className="text-gray-500 ml-2">({venue.reviews} ratings)</span>
                   </div>
                   <p className="text-gray-600">
                     Based on {venue.reviews} verified ratings from past events.
