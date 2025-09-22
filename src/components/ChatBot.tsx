@@ -212,6 +212,8 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
                 }
                 return null;
               }).filter(Boolean);
+
+              const seenVenueIds = structuredRecommendations.map(rec => rec!.venue.id);
               
               // Set content text and recommendations
               contentText = "Here are some perfect venues for your event:";
