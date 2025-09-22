@@ -21,7 +21,7 @@ const transformVenue = (dbVenue: any): Venue => ({
     standing: dbVenue.standing_capacity,
   },
   price: {
-    hourly: dbVenue.hourly_price / 100, // Convert from cents to dollars
+    hourly: dbVenue.hourly_price / 100,
     daily: dbVenue.daily_price / 100,
   },
   amenities: dbVenue.amenities || [],
@@ -102,7 +102,6 @@ Feel free to include as much detail as you can — the more I know, the better I
     ]);
   };
 
-  // Persist messages to localStorage
   useEffect(() => {
     localStorage.setItem('chatMessages', JSON.stringify(messages));
   }, [messages]);
@@ -120,14 +119,13 @@ Feel free to include as much detail as you can — the more I know, the better I
     let structuredRecommendations: Array<{ explanation: string; venue: Venue }> = [];
 
     try {
-      console.log('Calling Smythos API via proxy with requirements:', userMessage);
-
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       if (!supabaseUrl || !supabaseAnonKey) {
         throw new Error('Supabase configuration not found');
       }
+
       const history = messages.map(m => ({
         role: m.type === 'user' ? 'user' : 'assistant',
         content: m.content,
@@ -137,7 +135,7 @@ Feel free to include as much detail as you can — the more I know, the better I
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          Authorization: `Bearer ${supabaseAnonKey}`,
         },
         body: JSON.stringify({ requirements: userMessage, history }),
       });
@@ -145,63 +143,35 @@ Feel free to include as much detail as you can — the more I know, the better I
       if (!apiResponse.ok) {
         throw new Error(`Proxy API error: ${apiResponse.status}`);
       }
-      console.log(apiResponse);
 
-      // parse proxy top-level JSON
       let responseData: any = null;
       try {
         responseData = await apiResponse.json();
-      } catch (err) {
-        console.warn('Proxy returned non-JSON top-level response:', err);
+      } catch {
         responseData = null;
       }
-      console.log('proxy responseData:', responseData);
 
-      // Handle new structured API response format
-      if (responseData?.response?.success && responseData?.response?.venues && typeof responseData.venues === 'object') {
-  const venuesArray = Object.values(responseData.response.venues);
-
-        structuredRecommendations = venuesArray
-          .map((item: any) => {
-            if (!item.id) return null;
-            return {
-              explanation: item.response,
-              venue: { id: item.id } as Venue, // optional: fetch full venue details if needed
-            };
-          })
-          .filter(Boolean);
-
-        if (structuredRecommendations.length > 0) {
-          contentText = "Here are some great venue recommendations for you:";
-        } else {
-          contentText =
-            "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
-        }
-      } else if (responseData?.Output?.venues && typeof responseData.Output.venues === 'object') {
-        const venuesArray = Object.values(responseData.Output.venues);
-
-        structuredRecommendations = venuesArray
-          .map((item: any) => {
-            if (!item.id) return null;
-            return {
-              explanation: item.response,
-              venue: { id: item.id } as Venue,
-            };
-          })
-          .filter(Boolean);
-
-        if (structuredRecommendations.length > 0) {
-          contentText = "Here are some great venue recommendations for you:";
-        } else {
-          contentText =
-            "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
-        }
-      } else {
-        contentText =
-          responseData?.response || "I'm sorry, I didn't receive a proper response. Please try again.";
+      // Fix: normalize both response formats to an array
+      let venuesArray: any[] = [];
+      if (responseData?.response?.venues) {
+        venuesArray = Object.values(responseData.response.venues);
+      } else if (responseData?.Output?.venues) {
+        venuesArray = Object.values(responseData.Output.venues);
       }
+
+      structuredRecommendations = venuesArray
+        .map(v => {
+          if (!v.id) return null;
+          return { explanation: v.response, venue: { id: v.id } as Venue };
+        })
+        .filter(Boolean);
+
+      contentText =
+        structuredRecommendations.length > 0
+          ? 'Here are some great venue recommendations for you:'
+          : "I couldn't find specific venue recommendations at this time. Please try rephrasing your request.";
     } catch (error) {
-      console.error('Error calling Smythos API via proxy:', error);
+      console.error('Error calling Smythos API:', error);
       contentText =
         "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
       structuredRecommendations = [];
@@ -230,7 +200,6 @@ Feel free to include as much detail as you can — the more I know, the better I
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate AI thinking delay
     setTimeout(() => {
       generateBotResponse(inputMessage).then(botResponse => {
         setMessages(prev => [...prev, botResponse]);
@@ -250,7 +219,6 @@ Feel free to include as much detail as you can — the more I know, the better I
     <div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between">
-        {/* Left side (bot icon + title) */}
         <div className="flex items-center space-x-3">
           <div className="relative">
             <Bot className="h-8 w-8" />
@@ -262,7 +230,6 @@ Feel free to include as much detail as you can — the more I know, the better I
           </div>
         </div>
 
-        {/* Right side (Clear button) */}
         <button
           onClick={handleClearHistory}
           className="flex items-center space-x-1 text-sm bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg transition"
@@ -302,42 +269,23 @@ Feel free to include as much detail as you can — the more I know, the better I
                   <div className="text-sm whitespace-pre-line">{message.content}</div>
                 </div>
 
-                {/* Legacy venue recommendations */}
-                {message.venueRecommendations && message.venueRecommendations.length > 0 && (
-                  <div className="mt-4">
-                    <div className="text-sm text-gray-600 mb-3 font-medium">
-                      Recommended Venues ({message.venueRecommendations.length})
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
-                      {message.venueRecommendations
-                        .map(venue => (
-                          <div key={venue.id} className="transform scale-90 origin-top-left">
-                            <VenueCard venue={venue} />
+                {message.structuredRecommendations &&
+                  message.structuredRecommendations.length > 0 && (
+                    <div className="mt-4 space-y-6">
+                      {message.structuredRecommendations.map((rec, idx) => (
+                        <div key={`${rec.venue.id}-${idx}`} className="space-y-3">
+                          <div className="bg-blue-50 rounded-lg px-4 py-3 border-l-4 border-blue-400">
+                            <div className="text-sm text-gray-800 whitespace-pre-line">
+                              {rec.explanation}
+                            </div>
                           </div>
-                        ))
-                        .reverse()}
-                    </div>
-                  </div>
-                )}
-
-                {/* New structured recommendations */}
-                {message.structuredRecommendations && message.structuredRecommendations.length > 0 && (
-                  <div className="mt-4 space-y-6">
-                    {message.structuredRecommendations.map((recommendation, index) => (
-                      <div key={`${recommendation.venue.id}-${index}`} className="space-y-3">
-                        <div className="bg-blue-50 rounded-lg px-4 py-3 border-l-4 border-blue-400">
-                          <div className="text-sm text-gray-800 whitespace-pre-line">
-                            {recommendation.explanation}
+                          <div className="transform scale-90 origin-top-left max-w-md">
+                            <VenueCard venue={rec.venue} />
                           </div>
                         </div>
-
-                        <div className="transform scale-90 origin-top-left max-w-md">
-                          <VenueCard venue={recommendation.venue} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
           </div>
@@ -387,7 +335,8 @@ Feel free to include as much detail as you can — the more I know, the better I
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          Try asking about wedding venues, corporate spaces, outdoor locations, or your specific requirements!
+          Try asking about wedding venues, corporate spaces, outdoor locations, or your specific
+          requirements!
         </p>
       </div>
     </div>
