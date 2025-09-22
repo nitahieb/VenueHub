@@ -60,7 +60,7 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
             </div>
             <div className="flex items-center">
               <Clock className="h-4 w-4 mr-1" />
-              <span>{venue.reviews} reviews</span>
+              <span>{venue.reviews} ratings</span>
             </div>
           </div>
 
