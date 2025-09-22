@@ -3,7 +3,7 @@ import { Github, Linkedin, Mail, MapPin } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 text-white mt-16">
+    <footer className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Top Section */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-8 mb-8">
