@@ -28,7 +28,7 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
             </div>
           )}
         </div>
-        
+
         <div className="p-6">
           <div className="flex items-start justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
@@ -41,16 +41,18 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
               </span>
             </div>
           </div>
-          
+
           <div className="flex items-center text-gray-500 text-sm mb-3">
             <MapPin className="h-4 w-4 mr-1" />
-            <span>{venue.location.city}, {venue.location.state}</span>
+            <span>
+              {venue.location.city}, {venue.location.state}
+            </span>
           </div>
-          
+
           <p className="text-gray-600 text-sm mb-4 line-clamp-2">
             {venue.description}
           </p>
-          
+
           <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
             <div className="flex items-center">
               <Users className="h-4 w-4 mr-1" />
@@ -61,12 +63,27 @@ const VenueCard: React.FC<VenueCardProps> = ({ venue }) => {
               <span>{venue.reviews} reviews</span>
             </div>
           </div>
-          
+
+          {/* Updated Price Section */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center text-blue-600 font-semibold">
-              <DollarSign className="h-4 w-4" />
-              <p className="text-lg font-semibold text-gray-700">${(venue.price.daily ?? 0).toLocaleString()}</p>
+            <div className="flex space-x-4">
+              {/* Hourly Price */}
+              <div className="flex items-center text-blue-600 font-semibold space-x-1">
+                <DollarSign className="h-4 w-4" />
+                <p className="text-sm text-gray-700">
+                  Hourly: ${(venue.price.hourly ?? 0).toLocaleString()}
+                </p>
+              </div>
+
+              {/* Daily Price */}
+              <div className="flex items-center text-blue-600 font-semibold space-x-1">
+                <DollarSign className="h-4 w-4" />
+                <p className="text-sm text-gray-700">
+                  Daily: ${(venue.price.daily ?? 0).toLocaleString()}
+                </p>
+              </div>
             </div>
+
             <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
               View Details
             </button>
