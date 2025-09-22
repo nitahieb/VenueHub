@@ -135,6 +135,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     const history = messages.map(m => ({
     role: m.type === 'user' ? 'user' : 'assistant',
     content: m.content,
+    structuredRecommendations: m.structuredRecommendations
     }));
 
     const apiResponse = await fetch(`${supabaseUrl}/functions/v1/smythos-chat-proxy`, {
