@@ -161,7 +161,7 @@ Deno.serve(async (req: Request) => {
     console.log('Parsed Smythos data:', smythosData);
 
     // Extract the result text directly - it should already be a string
-    const responseContent = smythosData.result || "I found some venues for you!";
+    const responseContent = smythosData.venues || "I found some venues for you!";
 
     // Fetch venue details if venue IDs are provided
     let venues = [];
