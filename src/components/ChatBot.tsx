@@ -177,7 +177,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
       console.log('Processing new API format with structured venues');
       
       const structuredVenues = responseData.response.venues;
-      if(structuredVenues[0].id!= null) {
+      if(structuredVenues[0].id === null) {
         console.log("No matches")
             return {
                 id: Date.now().toString(),
