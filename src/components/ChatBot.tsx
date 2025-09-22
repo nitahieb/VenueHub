@@ -158,8 +158,8 @@ Feel free to include as much detail as you can — the more I know, the better I
       console.log('proxy responseData:', responseData);
 
       // Handle new structured API response format
-      if (responseData?.success && responseData?.venues && typeof responseData.venues === 'object') {
-  const venuesArray = Object.values(responseData.venues);
+      if (responseData?.response?.success && responseData?.response?.venues && typeof responseData.venues === 'object') {
+  const venuesArray = Object.values(responseData.response.venues);
 
         structuredRecommendations = venuesArray
           .map((item: any) => {
