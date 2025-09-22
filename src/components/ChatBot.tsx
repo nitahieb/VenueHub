@@ -162,6 +162,9 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     }
     console.log('proxy responseData:', responseData);
 
+    if(responseData?.success && responseData?.response?.question?.question){
+      console.log(responseData.response.question.question)
+    }
     // Handle the new API format with structured venue responses
     if (responseData?.success && responseData?.response?.venues) {
       console.log('Processing new API format with structured venues');
