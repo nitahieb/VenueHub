@@ -163,7 +163,7 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     }
     console.log('proxy responseData:', responseData);
 
-    if(responseData?.success && responseData?.response?.question?.question){
+    if(responseData?.response?.question?.question){
       return {
     id: Date.now().toString(),
     type: 'bot',
