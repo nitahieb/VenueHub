@@ -49,4 +49,8 @@ export interface ChatMessage {
     explanation: string;
     venue: Venue;
   }>;
+  structuredRecommendations?: Array<{
+    explanation: string;
+    venue: Venue;
+  }>;
 }

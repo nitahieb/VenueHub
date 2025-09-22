@@ -156,80 +156,18 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     }
     console.log('proxy responseData:', responseData);
 
-    // --- locate the payload (it may be under response, result, or be the object itself) ---
-    let payload: any = null;
-
-    if (responseData && typeof responseData === 'object') {
-      // Prefer `response` (your example), then `result`, then top-level object
-      payload = responseData.response ?? responseData.result ?? responseData;
-    } else {
-      payload = responseData;
-    }
-
-    // payload might be a string that contains JSON. parse if so.
-    let parsedPayload: any = payload;
-    if (typeof payload === 'string') {
-      const trimmed = payload.trim();
-      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-        try {
-          parsedPayload = JSON.parse(payload);
-          console.log('parsedPayload after JSON.parse(payload):', parsedPayload);
-        } catch (err) {
-          console.warn('Failed to parse payload string as JSON, using as text:', err);
-          parsedPayload = { result: payload };
-        }
-      } else {
-        // plain text
-        parsedPayload = { result: payload };
-      }
-    }
-
-    // Some responses are nested: parsedPayload.result could itself be a JSON string.
-    if (parsedPayload && typeof parsedPayload.result === 'string') {
-      const maybe = parsedPayload.result.trim();
-      if (maybe.startsWith('{') || maybe.startsWith('[')) {
-        try {
-          const inner = JSON.parse(parsedPayload.result);
-          // merge inner fields into parsedPayload (inner may contain result and venue_ids)
-          parsedPayload = { ...parsedPayload, ...inner };
-          console.log('unwrapped nested parsedPayload.result JSON:', inner);
-        } catch (err) {
-          // ignore parse failure and keep original string result
-        }
-      }
-    }
-
-    console.log('final parsedPayload:', parsedPayload);
-
-    // Extract user-facing text
-    contentText =
-      parsedPayload?.result ??
-      parsedPayload?.response ??
-      parsedPayload?.text ??
-      parsedPayload?.message ??
-      'I found some great venues for you!';
-
-    // Ensure contentText is a string
-    if (typeof contentText !== 'string') {
-      contentText = String(contentText);
-    }
-
-    // If the proxy already included venue rows in responseData.venues, use them.
-    if (Array.isArray(responseData?.venues) && responseData.venues.length > 0) {
-      console.log('Using venues provided directly in responseData.venues');
-      venueRecommendations = responseData.venues.map(transformVenue);
-    } else {
-      // Try to extract venue IDs from parsedPayload (defensive checks)
-      const venueIds: string[] =
-        Array.isArray(parsedPayload?.venue_ids) ? parsedPayload.venue_ids
-        : Array.isArray(parsedPayload?.venueIds) ? parsedPayload.venueIds
-        : [];
-
-      console.log('venueIds extracted:', venueIds);
-
+    // Handle the new API format with structured venue responses
+    if (responseData?.success && responseData?.response?.venues) {
+      console.log('Processing new API format with structured venues');
+      
+      const structuredVenues = responseData.response.venues;
+      const venueIds = structuredVenues.map((v: any) => v.id);
+      
+      console.log('Extracted venue IDs:', venueIds);
+      
+      // Fetch venue details from database
       if (venueIds.length > 0) {
-        // quote ids for Supabase REST filter: id=in.("id1","id2")
-        const quoted = venueIds.map(id => `"${String(id).replace(/"/g, '')}"`).join(',');
+        const quoted = venueIds.map((id: string) => `"${String(id).replace(/"/g, '')}"`).join(',');
         const venuesUrl = `${supabaseUrl}/rest/v1/venues?id=in.(${quoted})&select=*`;
         console.log('Fetching venues from Supabase REST:', venuesUrl);
 
@@ -243,26 +181,46 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
             },
           });
 
-          if (!venuesResponse.ok) {
-            console.warn('Supabase venues fetch returned non-ok status:', venuesResponse.status);
-          } else {
+          if (venuesResponse.ok) {
             const venuesData = await venuesResponse.json();
             console.log('venuesData from Supabase:', venuesData);
+            
             if (Array.isArray(venuesData) && venuesData.length > 0) {
-              venueRecommendations = venuesData.map(transformVenue);
-            } else {
-              console.warn('No venue rows returned for provided IDs. Check IDs exist in DB or CORS/permission issues.');
+              // Create structured recommendations with explanations
+              const structuredRecommendations = structuredVenues.map((structuredVenue: any) => {
+                const venueData = venuesData.find((v: any) => v.id === structuredVenue.id);
+                if (venueData) {
+                  return {
+                    explanation: structuredVenue.response,
+                    venue: transformVenue(venueData)
+                  };
+                }
+                return null;
+              }).filter(Boolean);
+              
+              // Set content text and recommendations
+              contentText = "Here are some perfect venues for your event:";
+              
+              return {
+                id: Date.now().toString(),
+                type: 'bot',
+                content: contentText,
+                timestamp: new Date(),
+                structuredRecommendations,
+              };
             }
           }
         } catch (err) {
-          console.error('Failed to fetch venue rows from Supabase:', err);
+          console.error('Failed to fetch venue details:', err);
         }
       }
     }
+    
+    // Fallback to simple text response
+    contentText = "I'm here to help you find the perfect venue! Could you tell me more about your event requirements?";
   } catch (error) {
     console.error('Error calling Smythos API via proxy:', error);
     contentText = "I'm sorry, I'm having trouble connecting to our venue recommendation service right now. Please try again in a moment.";
-    venueRecommendations = [];
   }
 
   return {
@@ -270,7 +228,6 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     type: 'bot',
     content: contentText,
     timestamp: new Date(),
-    venueRecommendations,
   };
 };
 
@@ -354,6 +311,28 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
 }`}>
   <div className="text-sm whitespace-pre-line">{message.content}</div>
 </div>
+
+{/* Structured Recommendations with Explanations */}
+{message.structuredRecommendations && message.structuredRecommendations.length > 0 && (
+  <div className="mt-4 space-y-4">
+    {message.structuredRecommendations.map((rec: any, index: number) => (
+      <div key={index} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {/* Explanation */}
+        <div className="p-4 bg-blue-50 border-b border-gray-200">
+          <p className="text-sm text-gray-700">{rec.explanation}</p>
+        </div>
+        {/* Venue Card */}
+        <div className="p-2">
+          <div className="transform scale-95 origin-top-left">
+            <VenueCard venue={rec.venue} />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
+{/* Legacy Venue Recommendations */}
 {message.venueRecommendations && message.venueRecommendations.length > 0 && (
   <div className="mt-4">
     <div className="text-sm text-gray-600 mb-3 font-medium">
@@ -368,7 +347,6 @@ const generateBotResponse = async (userMessage: string): Promise<ChatMessage> =>
     </div>
   </div>
 )}
-
               </div>
             </div>
           </div>
