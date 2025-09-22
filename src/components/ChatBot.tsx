@@ -110,8 +110,14 @@ const [messages, setMessages] = useState<ChatMessage[]>(() => {
   };
 
   useEffect(() => {
+  const lastMessage = messages[messages.length - 1];
+  if (!lastMessage) return;
+
+  // Only scroll if the last message is from the user
+  if (lastMessage.type === 'user') {
     scrollToBottom();
-  }, [isTyping]);
+  }
+  }, [messages]);
 
 const generateBotResponse = async (userMessage: string): Promise<ChatMessage> => {
   let contentText = '';
