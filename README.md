@@ -20,11 +20,11 @@ VenueHub is a platform designed to simplify the process of finding, booking, and
 
 ### Venue Browsing
 
-![Browse Event Venues](images/venuehub_browse_venues.png) <!-- Image 1 -->
+![Browse Event Venues](images/venuehub_browse_venues.PNG) <!-- Image 1 -->
 
 ### AI Venue Assistant
 
-![AI Venue Assistant](images/venuehub_ai_assistant.png) <!-- Image 2 -->
+![AI Venue Assistant](images/venuehub_ai_assistant.PNG) <!-- Image 2 -->
 
 ---
 
@@ -32,11 +32,11 @@ VenueHub is a platform designed to simplify the process of finding, booking, and
 
 ### System Overview
 
-![VenueHub Architecture Diagram](images/venuehub_architecture.png) <!-- Image 3 -->
+![VenueHub Architecture Diagram](images/venuehub_architecture.PNG) <!-- Image 3 -->
 
 ### Data & Interaction Flow
 
-![VenueHub Sequence Diagram](images/venuehub_sequence.png) <!-- Image 4 -->
+![VenueHub Sequence Diagram](images/venuehub_sequence.PNG) <!-- Image 4 -->
 
 ---
 
