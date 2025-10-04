@@ -36,7 +36,7 @@ VenueHub is a platform designed to simplify the process of finding, booking, and
 
 ### Data & Interaction Flow
 
-![VenueHub Sequence Diagram](images/venuehub_sequence.PNG) <!-- Image 4 -->
+![VenueHub Sequence Diagram](images/venuehub_sequence.png) <!-- Image 4 -->
 
 ---
 
