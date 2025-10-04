@@ -30,6 +30,10 @@ VenueHub is a platform designed to simplify the process of finding, booking, and
 
 ## Architecture
 
+### Agent Architecture
+
+![VenueHub Agent Architecture Diagram](images/smythos.PNG)
+
 ### System Overview
 
 ![VenueHub Architecture Diagram](images/venuehub_architecture.PNG) <!-- Image 3 -->
