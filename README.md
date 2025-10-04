@@ -44,43 +44,6 @@ VenueHub is a platform designed to simplify the process of finding, booking, and
 
 ---
 
-## Getting Started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (if using a JavaScript backend)
-- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
-- Database (e.g., PostgreSQL, MongoDB, or SQLite)
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/nitahieb/VenueHub.git
-   cd VenueHub
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
-
-3. Configure environment variables:
-   - Create a `.env` file based on `.env.example` and set the required values.
-
-4. Run the development server:
-   ```bash
-   npm start
-   # or
-   yarn start
-   ```
-
-5. Visit [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
 ## Usage
 
 - **Browse Venues:** Use the search bar and filters to find your ideal venue.
